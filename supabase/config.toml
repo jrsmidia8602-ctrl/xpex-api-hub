@@ -1,1 +1,10 @@
 project_id = "bgfjhietjsrlzscxdutt"
+
+[functions.ai-insights]
+verify_jwt = false
+
+[functions.validate-email-ai]
+verify_jwt = false
+
+[functions.api-assistant]
+verify_jwt = false

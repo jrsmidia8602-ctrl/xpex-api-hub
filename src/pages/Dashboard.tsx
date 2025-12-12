@@ -5,6 +5,7 @@ import { StatsCard } from "@/components/admin/StatsCard";
 import { UsageChart } from "@/components/admin/UsageChart";
 import { APIKeysTable } from "@/components/admin/APIKeysTable";
 import { RecentActivity } from "@/components/admin/RecentActivity";
+import { AIInsights } from "@/components/admin/AIInsights";
 import { useAuth } from "@/hooks/useAuth";
 import { useAPIKeys } from "@/hooks/useAPIKeys";
 
@@ -101,6 +102,11 @@ const Dashboard = () => {
           <div>
             <RecentActivity />
           </div>
+        </div>
+
+        {/* AI Insights */}
+        <div className="mb-8">
+          <AIInsights />
         </div>
 
         {/* API Keys Table */}

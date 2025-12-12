@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail, CheckCircle2, XCircle, AlertTriangle, Loader2, Shield, Server, Clock } from "lucide-react";
+import { Mail, CheckCircle2, XCircle, AlertTriangle, Loader2, Shield, Server, Clock, Brain, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface ValidationResult {
   email: string;
@@ -12,7 +14,14 @@ interface ValidationResult {
   format_valid: boolean;
   domain: string;
   risk_level: "low" | "medium" | "high";
-  suggestions?: string[];
+  risk_score?: number;
+  fraud_indicators?: string[];
+  typo_detected?: boolean;
+  suggested_correction?: string | null;
+  domain_analysis?: string | null;
+  recommendations?: string[];
+  response_time_ms?: number;
+  ai_powered?: boolean;
 }
 
 const EmailValidator = () => {
@@ -25,27 +34,23 @@ const EmailValidator = () => {
     
     setIsLoading(true);
     
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    
-    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    const domain = email.split("@")[1] || "";
-    const isDisposable = ["tempmail.com", "guerrillamail.com", "10minutemail.com", "mailinator.com"].some(d => domain.includes(d));
-    
-    const mockResult: ValidationResult = {
-      email,
-      valid: isValid && !isDisposable,
-      score: isValid ? (isDisposable ? 35 : 92) : 10,
-      disposable: isDisposable,
-      mx_found: isValid && !isDisposable,
-      format_valid: isValid,
-      domain,
-      risk_level: isDisposable ? "high" : isValid ? "low" : "medium",
-      suggestions: isValid ? undefined : ["Check for typos", "Verify the domain exists"],
-    };
-    
-    setResult(mockResult);
-    setIsLoading(false);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-email-ai', {
+        body: { email }
+      });
+
+      if (error) throw error;
+      
+      if (data?.data) {
+        setResult(data.data);
+        toast.success('Validação concluída com IA!');
+      }
+    } catch (error) {
+      console.error('Validation error:', error);
+      toast.error('Erro na validação. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getRiskColor = (level: string) => {
@@ -171,10 +176,62 @@ const EmailValidator = () => {
                   </div>
                   <div className="p-4 rounded-xl bg-secondary/30 text-center">
                     <Clock className="w-5 h-5 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground mb-1">Response</p>
-                    <p className="font-semibold text-primary">42ms</p>
+                    <p className="text-xs text-muted-foreground mb-1">Resposta</p>
+                    <p className="font-semibold text-primary">{result.response_time_ms || 42}ms</p>
                   </div>
                 </div>
+
+                {/* AI Analysis Section */}
+                {result.ai_powered && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 text-sm text-primary">
+                      <Brain className="w-4 h-4" />
+                      <span className="font-medium">Análise com IA</span>
+                      <Sparkles className="w-3 h-3" />
+                    </div>
+
+                    {result.typo_detected && result.suggested_correction && (
+                      <div className="p-3 rounded-lg bg-neon-orange/10 border border-neon-orange/30">
+                        <p className="text-sm text-neon-orange font-medium">Possível erro de digitação</p>
+                        <p className="text-sm text-foreground/80">
+                          Você quis dizer: <span className="font-mono text-primary">{result.suggested_correction}</span>?
+                        </p>
+                      </div>
+                    )}
+
+                    {result.fraud_indicators && result.fraud_indicators.length > 0 && (
+                      <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+                        <p className="text-sm text-destructive font-medium mb-2">Indicadores de Risco</p>
+                        <ul className="text-sm text-foreground/80 space-y-1">
+                          {result.fraud_indicators.map((indicator, i) => (
+                            <li key={i} className="flex items-center gap-2">
+                              <AlertTriangle className="w-3 h-3 text-destructive" />
+                              {indicator}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {result.domain_analysis && (
+                      <div className="p-3 rounded-lg bg-secondary/50 border border-border/30">
+                        <p className="text-sm text-muted-foreground font-medium mb-1">Análise do Domínio</p>
+                        <p className="text-sm text-foreground/80">{result.domain_analysis}</p>
+                      </div>
+                    )}
+
+                    {result.recommendations && result.recommendations.length > 0 && (
+                      <div className="p-3 rounded-lg bg-neon-green/10 border border-neon-green/30">
+                        <p className="text-sm text-neon-green font-medium mb-2">Recomendações</p>
+                        <ul className="text-sm text-foreground/80 space-y-1">
+                          {result.recommendations.map((rec, i) => (
+                            <li key={i}>• {rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Raw Response */}
                 <div className="rounded-xl bg-background/50 p-4 border border-border/30">

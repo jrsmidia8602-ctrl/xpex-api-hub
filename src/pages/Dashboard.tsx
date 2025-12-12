@@ -1,12 +1,24 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, BarChart3, Key, Users, DollarSign } from "lucide-react";
+import { ArrowLeft, BarChart3, Key, Users, DollarSign, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/admin/StatsCard";
 import { UsageChart } from "@/components/admin/UsageChart";
 import { APIKeysTable } from "@/components/admin/APIKeysTable";
 import { RecentActivity } from "@/components/admin/RecentActivity";
+import { useAuth } from "@/hooks/useAuth";
+import { useAPIKeys } from "@/hooks/useAPIKeys";
 
 const Dashboard = () => {
+  const { user, signOut } = useAuth();
+  const { keys } = useAPIKeys();
+
+  const activeKeys = keys.filter(k => k.status === 'active').length;
+  const totalCalls = keys.reduce((acc, k) => acc + k.calls_count, 0);
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Background Effects */}
@@ -29,9 +41,20 @@ const Dashboard = () => {
               Admin Dashboard
             </h1>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground font-mono">Gold Email Validator</span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground font-mono">
+              {user?.email}
+            </span>
             <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleSignOut}
+              className="text-muted-foreground hover:text-red-400"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
           </div>
         </div>
       </header>
@@ -42,30 +65,30 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatsCard
             title="Total de Chamadas"
-            value="60,880"
+            value={totalCalls.toLocaleString()}
             change="+12.5% este mês"
             changeType="positive"
             icon={BarChart3}
           />
           <StatsCard
             title="API Keys Ativas"
-            value="2"
-            change="3 total"
+            value={activeKeys.toString()}
+            change={`${keys.length} total`}
             changeType="neutral"
             icon={Key}
           />
           <StatsCard
             title="Usuários Únicos"
-            value="1,234"
-            change="+8.2% este mês"
-            changeType="positive"
+            value="1"
+            change="Seu perfil"
+            changeType="neutral"
             icon={Users}
           />
           <StatsCard
             title="Receita (MRR)"
-            value="$720"
-            change="+25% este mês"
-            changeType="positive"
+            value="$0"
+            change="Free tier"
+            changeType="neutral"
             icon={DollarSign}
           />
         </div>

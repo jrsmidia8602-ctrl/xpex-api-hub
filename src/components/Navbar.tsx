@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Zap, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,7 +10,7 @@ const Navbar = () => {
     { name: "APIs", href: "#apis" },
     { name: "Validator", href: "#validator" },
     { name: "Pricing", href: "#pricing" },
-    { name: "Docs", href: "#docs" },
+    { name: "Dashboard", href: "/dashboard", isRoute: true },
   ];
 
   return (
@@ -30,15 +31,25 @@ const Navbar = () => {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                className="text-muted-foreground hover:text-primary transition-colors text-sm font-medium"
-              >
-                {link.name}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              link.isRoute ? (
+                <Link
+                  key={link.name}
+                  to={link.href}
+                  className="text-muted-foreground hover:text-primary transition-colors text-sm font-medium"
+                >
+                  {link.name}
+                </Link>
+              ) : (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  className="text-muted-foreground hover:text-primary transition-colors text-sm font-medium"
+                >
+                  {link.name}
+                </a>
+              )
+            )}
           </div>
 
           {/* CTA */}
@@ -64,16 +75,27 @@ const Navbar = () => {
         {isOpen && (
           <div className="md:hidden py-4 border-t border-border/50">
             <div className="flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                  onClick={() => setIsOpen(false)}
-                >
-                  {link.name}
-                </a>
-              ))}
+              {navLinks.map((link) =>
+                link.isRoute ? (
+                  <Link
+                    key={link.name}
+                    to={link.href}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {link.name}
+                  </Link>
+                ) : (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {link.name}
+                  </a>
+                )
+              )}
               <div className="flex gap-4 pt-4">
                 <Button variant="ghost" size="sm" className="flex-1">
                   Login

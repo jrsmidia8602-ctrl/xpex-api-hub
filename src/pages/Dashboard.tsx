@@ -1,0 +1,90 @@
+import { Link } from "react-router-dom";
+import { ArrowLeft, BarChart3, Key, Users, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { StatsCard } from "@/components/admin/StatsCard";
+import { UsageChart } from "@/components/admin/UsageChart";
+import { APIKeysTable } from "@/components/admin/APIKeysTable";
+import { RecentActivity } from "@/components/admin/RecentActivity";
+
+const Dashboard = () => {
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Background Effects */}
+      <div className="fixed inset-0 bg-grid-pattern opacity-5 pointer-events-none" />
+      <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-neon-purple/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-neon-cyan/10 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link to="/">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar
+              </Button>
+            </Link>
+            <div className="h-6 w-px bg-border" />
+            <h1 className="text-xl font-display font-bold text-foreground">
+              Admin Dashboard
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground font-mono">Gold Email Validator</span>
+            <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8">
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatsCard
+            title="Total de Chamadas"
+            value="60,880"
+            change="+12.5% este mês"
+            changeType="positive"
+            icon={BarChart3}
+          />
+          <StatsCard
+            title="API Keys Ativas"
+            value="2"
+            change="3 total"
+            changeType="neutral"
+            icon={Key}
+          />
+          <StatsCard
+            title="Usuários Únicos"
+            value="1,234"
+            change="+8.2% este mês"
+            changeType="positive"
+            icon={Users}
+          />
+          <StatsCard
+            title="Receita (MRR)"
+            value="$720"
+            change="+25% este mês"
+            changeType="positive"
+            icon={DollarSign}
+          />
+        </div>
+
+        {/* Charts and Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <UsageChart />
+          </div>
+          <div>
+            <RecentActivity />
+          </div>
+        </div>
+
+        {/* API Keys Table */}
+        <APIKeysTable />
+      </main>
+    </div>
+  );
+};
+
+export default Dashboard;

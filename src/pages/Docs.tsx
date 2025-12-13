@@ -1,41 +1,134 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Copy, Check, Play, Code, Book, Terminal, Zap } from "lucide-react";
+import { ArrowLeft, Copy, Check, Play, Code, Book, Terminal, Zap, FileJson } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+
+// OpenAPI 3.0 Specification
+const openApiSpec = {
+  openapi: "3.0.3",
+  info: {
+    title: "XPEX Email Validation API",
+    description: "AI-powered email validation API with disposable detection, typo correction, and risk analysis.",
+    version: "1.0.0",
+    contact: { email: "support@xpex.dev" },
+    license: { name: "MIT", url: "https://opensource.org/licenses/MIT" },
+  },
+  servers: [
+    { url: "https://bgfjhietjsrlzscxdutt.supabase.co/functions/v1", description: "Production" },
+  ],
+  paths: {
+    "/validate-email": {
+      post: {
+        summary: "Validate Email Address",
+        description: "Validates an email address and returns detailed information about its quality and risk level.",
+        operationId: "validateEmail",
+        security: [{ ApiKeyAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/EmailRequest" },
+              example: { email: "user@example.com" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Successful validation",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ValidationResponse" },
+              },
+            },
+          },
+          "400": { description: "Invalid request" },
+          "401": { description: "Invalid or missing API key" },
+          "429": { description: "Rate limit exceeded" },
+        },
+      },
+    },
+  },
+  components: {
+    securitySchemes: {
+      ApiKeyAuth: { type: "apiKey", in: "header", name: "x-api-key" },
+    },
+    schemas: {
+      EmailRequest: {
+        type: "object",
+        required: ["email"],
+        properties: { email: { type: "string", format: "email" } },
+      },
+      ValidationResponse: {
+        type: "object",
+        properties: {
+          email: { type: "string" },
+          valid: { type: "boolean" },
+          score: { type: "integer", minimum: 0, maximum: 100 },
+          formatValid: { type: "boolean" },
+          isDisposable: { type: "boolean" },
+          mxValid: { type: "boolean" },
+          domain: { type: "string" },
+          suggestion: { type: "string", nullable: true },
+        },
+      },
+    },
+  },
+};
 
 const endpoints = [
   {
     id: "validate",
     name: "Email Validation",
     method: "POST",
-    path: "/api/validate",
-    description: "Valida um email e retorna informações detalhadas sobre sua qualidade e risco.",
+    path: "/validate-email",
+    description: "Validates an email and returns detailed information about its quality and risk.",
     request: `{
-  "email": "teste@gmail.com"
+  "email": "test@gmail.com"
 }`,
     response: `{
-  "ok": true,
-  "data": {
-    "email": "teste@gmail.com",
-    "valid": true,
-    "score": 85,
-    "disposable": false,
-    "mx_records": true,
-    "domain": "gmail.com",
-    "risk_level": "low"
+  "email": "test@gmail.com",
+  "valid": true,
+  "score": 95,
+  "formatValid": true,
+  "isDisposable": false,
+  "mxValid": true,
+  "domain": "gmail.com",
+  "suggestion": null
+}`,
   },
-  "credits_used": 1,
-  "remaining_credits": 999
+  {
+    id: "validate-ai",
+    name: "AI Email Validation",
+    method: "POST",
+    path: "/validate-email-ai",
+    description: "AI-powered validation with risk analysis, typosquatting detection, and fraud indicators.",
+    request: `{
+  "email": "test@gmail.com"
+}`,
+    response: `{
+  "email": "test@gmail.com",
+  "isValid": true,
+  "riskLevel": "low",
+  "riskScore": 15,
+  "analysis": {
+    "formatValid": true,
+    "domainType": "established_provider",
+    "hasSuspiciousPatterns": false,
+    "typosquattingRisk": "none",
+    "fraudIndicators": []
+  },
+  "recommendation": "Safe to use",
+  "confidence": 0.95
 }`,
   },
   {
     id: "health",
     name: "Health Check",
     method: "GET",
-    path: "/api/health",
-    description: "Verifica o status do serviço.",
+    path: "/health",
+    description: "Check the API service status.",
     request: null,
     response: `{
   "status": "healthy",
@@ -43,49 +136,32 @@ const endpoints = [
   "uptime": "99.99%"
 }`,
   },
-  {
-    id: "stats",
-    name: "Usage Stats",
-    method: "GET",
-    path: "/api/stats",
-    description: "Retorna estatísticas de uso da sua API key.",
-    request: null,
-    response: `{
-  "ok": true,
-  "data": {
-    "total_calls": 15230,
-    "calls_today": 342,
-    "remaining_credits": 4758,
-    "plan": "pro"
-  }
-}`,
-  },
 ];
 
 const codeExamples = {
   curl: (endpoint: typeof endpoints[0]) => `curl -X ${endpoint.method} \\
-  https://api.xpex.dev${endpoint.path} \\
+  https://bgfjhietjsrlzscxdutt.supabase.co/functions/v1${endpoint.path} \\
   -H "Content-Type: application/json" \\
-  -H "X-API-Key: YOUR_API_KEY"${endpoint.request ? ` \\
+  -H "x-api-key: YOUR_API_KEY"${endpoint.request ? ` \\
   -d '${endpoint.request.replace(/\n/g, "").replace(/  /g, "")}'` : ""}`,
   
   python: (endpoint: typeof endpoints[0]) => `import requests
 
-url = "https://api.xpex.dev${endpoint.path}"
+url = "https://bgfjhietjsrlzscxdutt.supabase.co/functions/v1${endpoint.path}"
 headers = {
     "Content-Type": "application/json",
-    "X-API-Key": "YOUR_API_KEY"
+    "x-api-key": "YOUR_API_KEY"
 }
 ${endpoint.request ? `payload = ${endpoint.request}
 
 response = requests.${endpoint.method.toLowerCase()}(url, json=payload, headers=headers)` : `response = requests.${endpoint.method.toLowerCase()}(url, headers=headers)`}
 print(response.json())`,
   
-  javascript: (endpoint: typeof endpoints[0]) => `const response = await fetch("https://api.xpex.dev${endpoint.path}", {
+  javascript: (endpoint: typeof endpoints[0]) => `const response = await fetch("https://bgfjhietjsrlzscxdutt.supabase.co/functions/v1${endpoint.path}", {
   method: "${endpoint.method}",
   headers: {
     "Content-Type": "application/json",
-    "X-API-Key": "YOUR_API_KEY"
+    "x-api-key": "YOUR_API_KEY"
   }${endpoint.request ? `,
   body: JSON.stringify(${endpoint.request.replace(/\n/g, "").replace(/  /g, " ")})` : ""}
 });
@@ -97,15 +173,26 @@ console.log(data);`,
 const Docs = () => {
   const [selectedEndpoint, setSelectedEndpoint] = useState(endpoints[0]);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [playgroundEmail, setPlaygroundEmail] = useState("teste@gmail.com");
+  const [playgroundEmail, setPlaygroundEmail] = useState("test@gmail.com");
   const [playgroundResult, setPlaygroundResult] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const copyCode = (code: string, id: string) => {
     navigator.clipboard.writeText(code);
     setCopiedCode(id);
-    toast.success("Código copiado!");
+    toast.success("Code copied!");
     setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const downloadOpenApiSpec = () => {
+    const blob = new Blob([JSON.stringify(openApiSpec, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "xpex-openapi-spec.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("OpenAPI spec downloaded!");
   };
 
   const runPlayground = async () => {
@@ -150,23 +237,29 @@ const Docs = () => {
             <Link to="/">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
+                Back
               </Button>
             </Link>
             <div className="h-6 w-px bg-border" />
             <div className="flex items-center gap-2">
               <Book className="h-5 w-5 text-neon-cyan" />
               <h1 className="text-xl font-display font-bold text-foreground">
-                Documentação API
+                API Documentation
               </h1>
             </div>
           </div>
-          <Link to="/dashboard">
-            <Button variant="neon" size="sm">
-              <Zap className="h-4 w-4 mr-2" />
-              Dashboard
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={downloadOpenApiSpec}>
+              <FileJson className="h-4 w-4 mr-2" />
+              OpenAPI Spec
             </Button>
-          </Link>
+            <Link to="/dashboard">
+              <Button variant="neon" size="sm">
+                <Zap className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -201,13 +294,24 @@ const Docs = () => {
               </nav>
 
               <div className="mt-6 pt-6 border-t border-border/50">
-                <h4 className="font-semibold text-foreground mb-3 text-sm">Autenticação</h4>
+                <h4 className="font-semibold text-foreground mb-3 text-sm">Authentication</h4>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Todas as requisições requerem uma API Key no header:
+                  All requests require an API Key in the header:
                 </p>
                 <code className="block text-xs bg-background/50 p-2 rounded font-mono text-neon-cyan">
-                  X-API-Key: sua_key
+                  x-api-key: your_key
                 </code>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-border/50">
+                <h4 className="font-semibold text-foreground mb-3 text-sm">OpenAPI 3.0</h4>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Download the full OpenAPI specification for integration.
+                </p>
+                <Button variant="outline" size="sm" className="w-full" onClick={downloadOpenApiSpec}>
+                  <FileJson className="h-3 w-3 mr-2" />
+                  Download Spec
+                </Button>
               </div>
             </div>
           </div>
@@ -236,7 +340,7 @@ const Docs = () => {
             <div className="glass-card p-6 rounded-xl border border-border/50">
               <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Code className="h-5 w-5 text-neon-purple" />
-                Exemplos de Código
+                Code Examples
               </h3>
               
               <Tabs defaultValue="curl" className="w-full">
@@ -274,7 +378,7 @@ const Docs = () => {
 
             {/* Response Example */}
             <div className="glass-card p-6 rounded-xl border border-border/50">
-              <h3 className="font-display font-semibold text-foreground mb-4">Resposta</h3>
+              <h3 className="font-display font-semibold text-foreground mb-4">Response</h3>
               <pre className="bg-background/80 p-4 rounded-lg border border-border/50 overflow-x-auto">
                 <code className="text-sm font-mono text-green-400 whitespace-pre">
                   {selectedEndpoint.response}
@@ -287,7 +391,7 @@ const Docs = () => {
               <div className="glass-card p-6 rounded-xl border border-neon-cyan/30 bg-neon-cyan/5">
                 <h3 className="font-display font-semibold text-foreground mb-4 flex items-center gap-2">
                   <Play className="h-5 w-5 text-neon-cyan" />
-                  Playground Interativo
+                  Interactive Playground
                 </h3>
                 
                 <div className="flex gap-4 mb-4">
@@ -295,16 +399,16 @@ const Docs = () => {
                     type="email"
                     value={playgroundEmail}
                     onChange={(e) => setPlaygroundEmail(e.target.value)}
-                    placeholder="Digite um email para testar"
+                    placeholder="Enter an email to test"
                     className="flex-1 px-4 py-2 bg-background/50 border border-border/50 rounded-lg font-mono text-sm text-foreground focus:border-neon-cyan focus:outline-none"
                   />
                   <Button variant="neon" onClick={runPlayground} disabled={isLoading}>
                     {isLoading ? (
-                      "Validando..."
+                      "Validating..."
                     ) : (
                       <>
                         <Play className="h-4 w-4 mr-2" />
-                        Testar
+                        Test
                       </>
                     )}
                   </Button>

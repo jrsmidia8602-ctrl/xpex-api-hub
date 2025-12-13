@@ -1,5 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Check, Zap, Building2, Rocket } from "lucide-react";
+import { useSubscription, STRIPE_PRICES } from "@/hooks/useSubscription";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const plans = [
   {
@@ -16,7 +19,7 @@ const plans = [
       "Standard latency",
     ],
     cta: "Get Started",
-    variant: "outline" as const,
+    tier: "free" as const,
     popular: false,
   },
   {
@@ -35,14 +38,14 @@ const plans = [
       "Custom rate limits",
     ],
     cta: "Start Pro Trial",
-    variant: "cyber" as const,
+    tier: "pro" as const,
     popular: true,
   },
   {
     name: "Enterprise",
     description: "Custom solutions for large organizations",
-    price: "Custom",
-    period: "",
+    price: "$199",
+    period: "/month",
     icon: Building2,
     features: [
       "Unlimited API calls",
@@ -54,13 +57,31 @@ const plans = [
       "On-premise deployment",
       "Custom integrations",
     ],
-    cta: "Contact Sales",
-    variant: "glass" as const,
+    cta: "Start Enterprise",
+    tier: "enterprise" as const,
     popular: false,
   },
 ];
 
 const PricingSection = () => {
+  const { subscription, startCheckout } = useSubscription();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handlePlanClick = async (tier: 'free' | 'pro' | 'enterprise') => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    if (tier === 'free') {
+      navigate('/dashboard');
+      return;
+    }
+
+    await startCheckout(tier);
+  };
+
   return (
     <section id="pricing" className="py-24 relative">
       {/* Background */}
@@ -82,61 +103,79 @@ const PricingSection = () => {
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan, index) => (
-            <div
-              key={plan.name}
-              className={`relative card-cyber rounded-3xl p-8 transition-all duration-500 hover:scale-105 animate-fade-in ${
-                plan.popular
-                  ? "border-primary/50 shadow-lg shadow-primary/20"
-                  : "border-border/50"
-              }`}
-              style={{ animationDelay: `${index * 0.1}s` }}
-            >
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-primary to-accent text-primary-foreground text-sm font-semibold rounded-full">
-                  Most Popular
-                </div>
-              )}
-
-              {/* Icon */}
-              <div className={`inline-flex p-3 rounded-xl mb-6 ${
-                plan.popular ? "bg-primary/20" : "bg-secondary/50"
-              }`}>
-                <plan.icon className={`w-6 h-6 ${plan.popular ? "text-primary" : "text-muted-foreground"}`} />
-              </div>
-
-              {/* Plan Info */}
-              <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-              <p className="text-muted-foreground text-sm mb-6">{plan.description}</p>
-
-              {/* Price */}
-              <div className="mb-8">
-                <span className={`text-5xl font-bold ${plan.popular ? "text-gradient" : ""}`}>
-                  {plan.price}
-                </span>
-                <span className="text-muted-foreground">{plan.period}</span>
-              </div>
-
-              {/* Features */}
-              <ul className="space-y-4 mb-8">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3">
-                    <Check className={`w-5 h-5 mt-0.5 ${plan.popular ? "text-primary" : "text-muted-foreground"}`} />
-                    <span className="text-sm">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA */}
-              <Button 
-                variant={plan.variant} 
-                size="lg" 
-                className="w-full"
+          {plans.map((plan, index) => {
+            const isCurrentPlan = subscription.tier === plan.tier;
+            
+            return (
+              <div
+                key={plan.name}
+                className={`relative card-cyber rounded-3xl p-8 transition-all duration-500 hover:scale-105 animate-fade-in ${
+                  plan.popular
+                    ? "border-primary/50 shadow-lg shadow-primary/20"
+                    : isCurrentPlan
+                    ? "border-green-500/50 shadow-lg shadow-green-500/20"
+                    : "border-border/50"
+                }`}
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
-                {plan.cta}
-              </Button>
-            </div>
-          ))}
+                {plan.popular && !isCurrentPlan && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-primary to-accent text-primary-foreground text-sm font-semibold rounded-full">
+                    Most Popular
+                  </div>
+                )}
+                
+                {isCurrentPlan && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-green-500 to-green-400 text-white text-sm font-semibold rounded-full">
+                    Your Plan
+                  </div>
+                )}
+
+                {/* Icon */}
+                <div className={`inline-flex p-3 rounded-xl mb-6 ${
+                  plan.popular ? "bg-primary/20" : isCurrentPlan ? "bg-green-500/20" : "bg-secondary/50"
+                }`}>
+                  <plan.icon className={`w-6 h-6 ${
+                    plan.popular ? "text-primary" : isCurrentPlan ? "text-green-400" : "text-muted-foreground"
+                  }`} />
+                </div>
+
+                {/* Plan Info */}
+                <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+                <p className="text-muted-foreground text-sm mb-6">{plan.description}</p>
+
+                {/* Price */}
+                <div className="mb-8">
+                  <span className={`text-5xl font-bold ${plan.popular ? "text-gradient" : ""}`}>
+                    {plan.price}
+                  </span>
+                  <span className="text-muted-foreground">{plan.period}</span>
+                </div>
+
+                {/* Features */}
+                <ul className="space-y-4 mb-8">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-3">
+                      <Check className={`w-5 h-5 mt-0.5 ${
+                        plan.popular ? "text-primary" : isCurrentPlan ? "text-green-400" : "text-muted-foreground"
+                      }`} />
+                      <span className="text-sm">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* CTA */}
+                <Button 
+                  variant={plan.popular ? "cyber" : isCurrentPlan ? "outline" : "glass"}
+                  size="lg" 
+                  className="w-full"
+                  onClick={() => handlePlanClick(plan.tier)}
+                  disabled={isCurrentPlan}
+                >
+                  {isCurrentPlan ? 'Current Plan' : plan.cta}
+                </Button>
+              </div>
+            );
+          })}
         </div>
 
         {/* Bottom Note */}

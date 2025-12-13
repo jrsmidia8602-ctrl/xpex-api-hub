@@ -199,6 +199,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_api_key_calls: { Args: { key_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

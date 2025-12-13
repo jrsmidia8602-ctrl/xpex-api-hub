@@ -2,22 +2,33 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, BarChart3, Key, Users, DollarSign, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/admin/StatsCard";
-import { UsageChart } from "@/components/admin/UsageChart";
+import { RealtimeUsageChart } from "@/components/admin/RealtimeUsageChart";
 import { APIKeysTable } from "@/components/admin/APIKeysTable";
 import { RecentActivity } from "@/components/admin/RecentActivity";
 import { AIInsights } from "@/components/admin/AIInsights";
+import { SubscriptionCard } from "@/components/admin/SubscriptionCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useAPIKeys } from "@/hooks/useAPIKeys";
+import { useUsageLogs } from "@/hooks/useUsageLogs";
+import { useSubscription } from "@/hooks/useSubscription";
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
   const { keys } = useAPIKeys();
+  const { stats } = useUsageLogs();
+  const { subscription } = useSubscription();
 
   const activeKeys = keys.filter(k => k.status === 'active').length;
-  const totalCalls = keys.reduce((acc, k) => acc + k.calls_count, 0);
+  const totalCalls = stats?.totalCalls || keys.reduce((acc, k) => acc + k.calls_count, 0);
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const tierLabels = {
+    free: 'Free tier',
+    pro: '+12.5% este mês',
+    enterprise: '+45.2% este mês'
   };
 
   return (
@@ -67,8 +78,8 @@ const Dashboard = () => {
           <StatsCard
             title="Total de Chamadas"
             value={totalCalls.toLocaleString()}
-            change="+12.5% este mês"
-            changeType="positive"
+            change={tierLabels[subscription.tier]}
+            changeType={subscription.tier === 'free' ? 'neutral' : 'positive'}
             icon={BarChart3}
           />
           <StatsCard
@@ -79,27 +90,28 @@ const Dashboard = () => {
             icon={Key}
           />
           <StatsCard
-            title="Usuários Únicos"
-            value="1"
-            change="Seu perfil"
-            changeType="neutral"
+            title="Créditos Mensais"
+            value={subscription.monthlyCredits === -1 ? '∞' : subscription.monthlyCredits.toLocaleString()}
+            change={subscription.tier.toUpperCase()}
+            changeType={subscription.tier === 'free' ? 'neutral' : 'positive'}
             icon={Users}
           />
           <StatsCard
-            title="Receita (MRR)"
-            value="$0"
-            change="Free tier"
-            changeType="neutral"
+            title="Plano Atual"
+            value={subscription.tier === 'free' ? '$0' : subscription.tier === 'pro' ? '$29' : '$199'}
+            change={subscription.tier === 'free' ? 'Free' : 'Ativo'}
+            changeType={subscription.tier === 'free' ? 'neutral' : 'positive'}
             icon={DollarSign}
           />
         </div>
 
-        {/* Charts and Activity */}
+        {/* Charts and Subscription */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
-            <UsageChart />
+            <RealtimeUsageChart />
           </div>
-          <div>
+          <div className="space-y-6">
+            <SubscriptionCard />
             <RecentActivity />
           </div>
         </div>

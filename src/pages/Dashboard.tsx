@@ -7,6 +7,10 @@ import { APIKeysTable } from "@/components/admin/APIKeysTable";
 import { RecentActivity } from "@/components/admin/RecentActivity";
 import { AIInsights } from "@/components/admin/AIInsights";
 import { SubscriptionCard } from "@/components/admin/SubscriptionCard";
+import { RateLimitingCard } from "@/components/admin/RateLimitingCard";
+import { LiveMetricsPanel } from "@/components/admin/LiveMetricsPanel";
+import { LatencyGraph } from "@/components/admin/LatencyGraph";
+import { EndpointBreakdown } from "@/components/admin/EndpointBreakdown";
 import { useAuth } from "@/hooks/useAuth";
 import { useAPIKeys } from "@/hooks/useAPIKeys";
 import { useUsageLogs } from "@/hooks/useUsageLogs";
@@ -105,6 +109,11 @@ const Dashboard = () => {
           />
         </div>
 
+        {/* Live Metrics Panel */}
+        <div className="mb-8">
+          <LiveMetricsPanel />
+        </div>
+
         {/* Charts and Subscription */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
@@ -112,13 +121,22 @@ const Dashboard = () => {
           </div>
           <div className="space-y-6">
             <SubscriptionCard />
-            <RecentActivity />
+            <RateLimitingCard />
           </div>
         </div>
 
-        {/* AI Insights */}
-        <div className="mb-8">
-          <AIInsights />
+        {/* Latency and Endpoint Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <LatencyGraph />
+          <EndpointBreakdown />
+        </div>
+
+        {/* AI Insights and Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <AIInsights />
+          </div>
+          <RecentActivity />
         </div>
 
         {/* API Keys Table */}

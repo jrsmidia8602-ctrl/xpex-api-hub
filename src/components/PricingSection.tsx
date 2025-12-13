@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Check, Zap, Building2, Rocket } from "lucide-react";
-import { useSubscription, STRIPE_PRICES } from "@/hooks/useSubscription";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import CreditPackages from "./CreditPackages";
 
 const plans = [
   {
@@ -182,6 +183,9 @@ const PricingSection = () => {
         <p className="text-center text-sm text-muted-foreground mt-12">
           All prices in USD. Need more? Volume discounts available for 100k+ calls/month.
         </p>
+
+        {/* Credit Packages */}
+        <CreditPackages />
       </div>
     </section>
   );

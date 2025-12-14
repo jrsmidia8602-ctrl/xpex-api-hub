@@ -11,6 +11,11 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Docs from "./pages/Docs";
+import Pricing from "./pages/Pricing";
+import Marketplace from "./pages/Marketplace";
+import Admin from "./pages/Admin";
+import About from "./pages/About";
+import Blog from "./pages/Blog";
 import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
 import SLA from "./pages/legal/SLA";
@@ -33,6 +38,10 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/docs" element={<Docs />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/marketplace" element={<Marketplace />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/blog" element={<Blog />} />
               <Route path="/legal/terms" element={<Terms />} />
               <Route path="/legal/privacy" element={<Privacy />} />
               <Route path="/legal/sla" element={<SLA />} />
@@ -43,6 +52,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route
+                path="/admin" 
+                element={
+                  <ProtectedRoute>
+                    <Admin />
                   </ProtectedRoute>
                 } 
               />

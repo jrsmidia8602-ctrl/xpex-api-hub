@@ -13,7 +13,9 @@ import Auth from "./pages/Auth";
 import Docs from "./pages/Docs";
 import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
+import SLA from "./pages/legal/SLA";
 import NotFound from "./pages/NotFound";
+import CookieConsent from "./components/CookieConsent";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +33,7 @@ const App = () => (
               <Route path="/docs" element={<Docs />} />
               <Route path="/legal/terms" element={<Terms />} />
               <Route path="/legal/privacy" element={<Privacy />} />
+              <Route path="/legal/sla" element={<SLA />} />
               <Route 
                 path="/dashboard" 
                 element={
@@ -43,6 +46,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <APIAssistant />
+            <CookieConsent />
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

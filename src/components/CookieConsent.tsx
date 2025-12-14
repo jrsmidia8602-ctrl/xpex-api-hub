@@ -1,0 +1,61 @@
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+
+const CookieConsent = () => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const consent = localStorage.getItem("cookie-consent");
+    if (!consent) {
+      setIsVisible(true);
+    }
+  }, []);
+
+  const acceptCookies = () => {
+    localStorage.setItem("cookie-consent", "accepted");
+    setIsVisible(false);
+  };
+
+  const declineCookies = () => {
+    localStorage.setItem("cookie-consent", "declined");
+    setIsVisible(false);
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 p-4">
+      <div className="max-w-4xl mx-auto bg-card border border-border rounded-lg shadow-lg p-4 md:p-6">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+          <div className="flex-1">
+            <p className="text-sm text-muted-foreground">
+              We use cookies to enhance your experience. By continuing to use our platform, you agree to our{" "}
+              <Link to="/legal/privacy" className="text-primary hover:underline">
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={declineCookies}>
+              Decline
+            </Button>
+            <Button size="sm" onClick={acceptCookies}>
+              Accept
+            </Button>
+          </div>
+          <button 
+            onClick={declineCookies}
+            className="absolute top-2 right-2 md:static text-muted-foreground hover:text-foreground"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CookieConsent;

@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Docs from "./pages/Docs";
 import Terms from "./pages/legal/Terms";
+import Privacy from "./pages/legal/Privacy";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/docs" element={<Docs />} />
               <Route path="/legal/terms" element={<Terms />} />
+              <Route path="/legal/privacy" element={<Privacy />} />
               <Route 
                 path="/dashboard" 
                 element={

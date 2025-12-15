@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
+import LiveValidator from "./LiveValidator";
 
 const HeroSection = () => {
   return (
@@ -51,6 +52,11 @@ const HeroSection = () => {
               <Play className="w-5 h-5" />
               Watch Demo
             </Button>
+          </div>
+
+          {/* Live Demo */}
+          <div className="mt-12 animate-fade-in" style={{ animationDelay: "0.35s" }}>
+            <LiveValidator />
           </div>
 
           {/* Stats */}

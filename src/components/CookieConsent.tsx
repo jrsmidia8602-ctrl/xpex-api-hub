@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, forwardRef } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
-const CookieConsent = () => {
+const CookieConsent = forwardRef<HTMLDivElement>((_, ref) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ const CookieConsent = () => {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4">
+    <div ref={ref} className="fixed bottom-0 left-0 right-0 z-50 p-4">
       <div className="max-w-4xl mx-auto bg-card border border-border rounded-lg shadow-lg p-4 md:p-6">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
           <div className="flex-1">
@@ -56,6 +56,8 @@ const CookieConsent = () => {
       </div>
     </div>
   );
-};
+});
+
+CookieConsent.displayName = "CookieConsent";
 
 export default CookieConsent;

@@ -1,25 +1,25 @@
 import { Zap, Github, Twitter, Linkedin } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   const links = {
     product: [
-      { name: "APIs", href: "#apis" },
-      { name: "Pricing", href: "#pricing" },
-      { name: "Documentation", href: "#docs" },
-      { name: "Changelog", href: "#" },
+      { name: "APIs", href: "/marketplace", isRoute: true },
+      { name: "Pricing", href: "/pricing", isRoute: true },
+      { name: "Documentation", href: "/docs", isRoute: true },
+      { name: "Status", href: "/status", isRoute: true },
     ],
     company: [
-      { name: "About", href: "#" },
-      { name: "Blog", href: "#" },
-      { name: "Status", href: "/status" },
-      { name: "Contact", href: "/contact" },
+      { name: "About", href: "/about", isRoute: true },
+      { name: "Blog", href: "/blog", isRoute: true },
+      { name: "Contact", href: "/contact", isRoute: true },
     ],
     legal: [
-      { name: "Privacy", href: "/legal/privacy" },
-      { name: "Terms", href: "/legal/terms" },
-      { name: "SLA", href: "/legal/sla" },
+      { name: "Privacy", href: "/legal/privacy", isRoute: true },
+      { name: "Terms", href: "/legal/terms", isRoute: true },
+      { name: "SLA", href: "/legal/sla", isRoute: true },
     ],
   };
 
@@ -29,13 +29,13 @@ const Footer = () => {
         <div className="grid md:grid-cols-5 gap-12">
           {/* Brand */}
           <div className="md:col-span-2">
-            <a href="#" className="flex items-center gap-2 mb-4">
+            <Link to="/" className="flex items-center gap-2 mb-4">
               <Zap className="w-8 h-8 text-primary" />
               <span className="text-xl font-bold">
                 <span className="text-gradient">XPEX</span>{" "}
                 <span className="text-foreground">NEURAL</span>
               </span>
-            </a>
+            </Link>
             <p className="text-muted-foreground text-sm mb-6 max-w-sm">
               Build APIs. Agents work for you. Money flows in. 
               The autonomous wealth engine for the Agent Economy.
@@ -59,12 +59,21 @@ const Footer = () => {
             <ul className="space-y-3">
               {links.product.map((link) => (
                 <li key={link.name}>
-                  <a
-                    href={link.href}
-                    className="text-muted-foreground hover:text-primary transition-colors text-sm"
-                  >
-                    {link.name}
-                  </a>
+                  {link.isRoute ? (
+                    <Link
+                      to={link.href}
+                      className="text-muted-foreground hover:text-primary transition-colors text-sm"
+                    >
+                      {link.name}
+                    </Link>
+                  ) : (
+                    <a
+                      href={link.href}
+                      className="text-muted-foreground hover:text-primary transition-colors text-sm"
+                    >
+                      {link.name}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
@@ -75,12 +84,21 @@ const Footer = () => {
             <ul className="space-y-3">
               {links.company.map((link) => (
                 <li key={link.name}>
-                  <a
-                    href={link.href}
-                    className="text-muted-foreground hover:text-primary transition-colors text-sm"
-                  >
-                    {link.name}
-                  </a>
+                  {link.isRoute ? (
+                    <Link
+                      to={link.href}
+                      className="text-muted-foreground hover:text-primary transition-colors text-sm"
+                    >
+                      {link.name}
+                    </Link>
+                  ) : (
+                    <a
+                      href={link.href}
+                      className="text-muted-foreground hover:text-primary transition-colors text-sm"
+                    >
+                      {link.name}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
@@ -91,12 +109,21 @@ const Footer = () => {
             <ul className="space-y-3">
               {links.legal.map((link) => (
                 <li key={link.name}>
-                  <a
-                    href={link.href}
-                    className="text-muted-foreground hover:text-primary transition-colors text-sm"
-                  >
-                    {link.name}
-                  </a>
+                  {link.isRoute ? (
+                    <Link
+                      to={link.href}
+                      className="text-muted-foreground hover:text-primary transition-colors text-sm"
+                    >
+                      {link.name}
+                    </Link>
+                  ) : (
+                    <a
+                      href={link.href}
+                      className="text-muted-foreground hover:text-primary transition-colors text-sm"
+                    >
+                      {link.name}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>

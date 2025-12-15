@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, forwardRef } from "react";
 import { MessageCircle, Send, X, Bot, User, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ interface Message {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/api-assistant`;
 
-export const APIAssistant = () => {
+export const APIAssistant = forwardRef<HTMLDivElement>((_, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -111,7 +111,7 @@ export const APIAssistant = () => {
   };
 
   return (
-    <>
+    <div ref={ref}>
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -208,6 +208,8 @@ export const APIAssistant = () => {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
-};
+});
+
+APIAssistant.displayName = "APIAssistant";

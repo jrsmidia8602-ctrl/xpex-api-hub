@@ -9,10 +9,10 @@ const Navbar = () => {
   const { user } = useAuth();
 
   const navLinks = [
-    { name: "APIs", href: "#apis" },
-    { name: "Validator", href: "#validator" },
-    { name: "Pricing", href: "#pricing" },
+    { name: "APIs", href: "/marketplace", isRoute: true },
+    { name: "Pricing", href: "/pricing", isRoute: true },
     { name: "Docs", href: "/docs", isRoute: true },
+    { name: "Status", href: "/status", isRoute: true },
   ];
 
   return (

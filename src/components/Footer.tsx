@@ -1,4 +1,4 @@
-import { Zap, Github, Twitter, Linkedin } from "lucide-react";
+import { Zap, Github, Twitter, Linkedin, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Footer = () => {
@@ -41,6 +41,9 @@ const Footer = () => {
               The autonomous wealth engine for the Agent Economy.
             </p>
             <div className="flex gap-4">
+              <a href="mailto:xpexneural@gmail.com" className="text-muted-foreground hover:text-primary transition-colors">
+                <Mail className="w-5 h-5" />
+              </a>
               <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
                 <Github className="w-5 h-5" />
               </a>

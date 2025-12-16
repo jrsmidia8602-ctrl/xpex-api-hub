@@ -17,7 +17,7 @@ const Navbar = () => {
   const { user } = useAuth();
 
   const products = [
-    { name: "Gold Email Validator", href: "/gold-email-validator", description: "Enterprise-grade email validation API" },
+    { name: "Gold Email Validator", href: "/products/gold-email-validator", description: "Enterprise-grade email validation API" },
   ];
 
   const navLinks = [

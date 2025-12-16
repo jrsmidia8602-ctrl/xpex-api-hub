@@ -21,6 +21,7 @@ import Privacy from "./pages/legal/Privacy";
 import SLA from "./pages/legal/SLA";
 import Contact from "./pages/Contact";
 import Status from "./pages/Status";
+import GoldEmailValidator from "./pages/GoldEmailValidator";
 import NotFound from "./pages/NotFound";
 import CookieConsent from "./components/CookieConsent";
 
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/legal/sla" element={<SLA />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/status" element={<Status />} />
+              <Route path="/gold-email-validator" element={<GoldEmailValidator />} />
               <Route
                 path="/dashboard" 
                 element={

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -15,11 +16,25 @@ const Footer = () => {
     if (!email) return;
     
     setIsSubmitting(true);
-    // Simulate subscription - in production, connect to email service
-    await new Promise(resolve => setTimeout(resolve, 800));
-    toast.success("Subscribed! Welcome to the XPEX Neural newsletter.");
-    setEmail("");
-    setIsSubmitting(false);
+    try {
+      const { data, error } = await supabase.functions.invoke("newsletter-subscribe", {
+        body: { email },
+      });
+
+      if (error) throw error;
+
+      if (data?.alreadySubscribed) {
+        toast.info("You're already subscribed to our newsletter!");
+      } else {
+        toast.success("Subscribed! Welcome to the XPEX Neural newsletter.");
+      }
+      setEmail("");
+    } catch (error: any) {
+      console.error("Newsletter subscription error:", error);
+      toast.error("Failed to subscribe. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const links = {

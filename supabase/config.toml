@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.purchase-credits]
 verify_jwt = false
+
+[functions.send-contact-email]
+verify_jwt = false

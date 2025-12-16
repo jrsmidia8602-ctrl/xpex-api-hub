@@ -98,7 +98,11 @@ const GoldEmailValidator = () => {
         console.log('Using default stats');
       }
     };
+    
     fetchStats();
+    const interval = setInterval(fetchStats, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const validationsCounter = useCountUp(stats.total_validations, 2500);

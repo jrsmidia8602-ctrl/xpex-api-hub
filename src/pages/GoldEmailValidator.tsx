@@ -16,14 +16,63 @@ import {
   CheckCircle,
   ArrowRight,
   Copy,
-  Code
+  Code,
+  Mail,
+  TrendingUp,
+  Clock
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+
+const useCountUp = (end: number, duration: number = 2000, start: number = 0) => {
+  const [count, setCount] = useState(start);
+  const [hasStarted, setHasStarted] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasStarted) {
+          setHasStarted(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasStarted]);
+
+  useEffect(() => {
+    if (!hasStarted) return;
+
+    let startTime: number;
+    const animate = (currentTime: number) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.floor(easeOut * (end - start) + start));
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [hasStarted, end, duration, start]);
+
+  return { count, ref };
+};
 
 const GoldEmailValidator = () => {
   const [activeTab, setActiveTab] = useState<"curl" | "javascript" | "python">("curl");
 
+  const validationsCounter = useCountUp(12500000, 2500);
+  const accuracyCounter = useCountUp(99, 2000);
+  const latencyCounter = useCountUp(47, 1500);
   const codeExamples = {
     curl: `curl -X POST https://api.xpex.dev/validate-email \\
   -H "x-api-key: YOUR_API_KEY" \\
@@ -136,6 +185,37 @@ print(result)`
               <Button asChild variant="outline" size="lg">
                 <Link to="/docs">View Documentation</Link>
               </Button>
+            </div>
+
+            {/* Animated Stats */}
+            <div className="grid grid-cols-3 gap-6 md:gap-12 pt-12 max-w-3xl mx-auto">
+              <div ref={validationsCounter.ref} className="text-center">
+                <div className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-yellow-400 to-amber-400 bg-clip-text text-transparent">
+                  {validationsCounter.count.toLocaleString()}+
+                </div>
+                <div className="flex items-center justify-center gap-1 text-xs md:text-sm text-muted-foreground mt-1">
+                  <Mail className="w-3 h-3 md:w-4 md:h-4" />
+                  Emails Validated
+                </div>
+              </div>
+              <div ref={accuracyCounter.ref} className="text-center">
+                <div className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
+                  {accuracyCounter.count}%
+                </div>
+                <div className="flex items-center justify-center gap-1 text-xs md:text-sm text-muted-foreground mt-1">
+                  <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
+                  Accuracy Rate
+                </div>
+              </div>
+              <div ref={latencyCounter.ref} className="text-center">
+                <div className="text-2xl md:text-4xl font-bold bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                  {latencyCounter.count}ms
+                </div>
+                <div className="flex items-center justify-center gap-1 text-xs md:text-sm text-muted-foreground mt-1">
+                  <Clock className="w-3 h-3 md:w-4 md:h-4" />
+                  Avg Latency
+                </div>
+              </div>
             </div>
           </div>
         </div>

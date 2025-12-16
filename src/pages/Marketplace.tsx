@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { Link } from "react-router-dom";
 import { Search, Star, Zap, Shield, Globe, Database, Link2, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ const apis = [
     calls: "2.5M+",
     featured: true,
     features: ["MX Check", "AI Risk Score", "Disposable Detection", "<50ms Latency"],
+    href: "/products/gold-email-validator",
   },
   {
     id: "breach-scan",
@@ -158,7 +160,9 @@ const Marketplace = () => {
                     <span className="text-primary font-semibold">{api.pricing}</span>
                   </div>
                 </div>
-                <Button size="lg">Try Now</Button>
+                <Button asChild size="lg">
+                  <Link to={api.href || `/products/${api.id}`}>Try Now</Link>
+                </Button>
               </div>
             </Card>
           </section>
@@ -168,30 +172,31 @@ const Marketplace = () => {
         <section className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {apis.filter((a) => !a.featured).map((api) => (
-              <Card
-                key={api.id}
-                className="p-6 bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all group"
-              >
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                    <api.icon className="w-6 h-6 text-primary" />
+              <Link key={api.id} to={api.href || `/products/${api.id}`}>
+                <Card
+                  className="p-6 bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-all group h-full"
+                >
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                      <api.icon className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-bold mb-1">{api.name}</h3>
+                      <Badge variant="outline" className="text-xs">
+                        {api.category}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold mb-1">{api.name}</h3>
-                    <Badge variant="outline" className="text-xs">
-                      {api.category}
-                    </Badge>
+                  <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{api.description}</p>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1">
+                      <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                      {api.rating}
+                    </span>
+                    <span className="text-primary font-medium">{api.pricing}</span>
                   </div>
-                </div>
-                <p className="text-muted-foreground text-sm mb-4 line-clamp-2">{api.description}</p>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-1">
-                    <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                    {api.rating}
-                  </span>
-                  <span className="text-primary font-medium">{api.pricing}</span>
-                </div>
-              </Card>
+                </Card>
+              </Link>
             ))}
           </div>
         </section>

@@ -98,17 +98,27 @@ const SLA = () => {
             ))}
           </div>
 
-          <div className="mt-12 pt-8 border-t border-border">
-            <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-              <Link to="/legal/terms" className="hover:text-primary transition-colors">
+          {/* Contact */}
+          <div className="mt-12 p-8 rounded-2xl bg-muted/30 border border-border text-center">
+            <h3 className="text-xl font-semibold text-foreground mb-3">
+              Questions about our SLA?
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              Contact our support team at{" "}
+              <a href="mailto:xpexneural@gmail.com" className="text-primary hover:underline">
+                xpexneural@gmail.com
+              </a>
+            </p>
+            <div className="flex flex-wrap justify-center gap-4 text-sm">
+              <Link to="/legal/terms" className="text-muted-foreground hover:text-foreground transition-colors">
                 Terms of Service
               </Link>
-              <span>•</span>
-              <Link to="/legal/privacy" className="hover:text-primary transition-colors">
+              <span className="text-border">•</span>
+              <Link to="/legal/privacy" className="text-muted-foreground hover:text-foreground transition-colors">
                 Privacy Policy
               </Link>
-              <span>•</span>
-              <Link to="/docs" className="hover:text-primary transition-colors">
+              <span className="text-border">•</span>
+              <Link to="/docs" className="text-muted-foreground hover:text-foreground transition-colors">
                 Documentation
               </Link>
             </div>

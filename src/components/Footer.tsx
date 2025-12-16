@@ -1,8 +1,26 @@
-import { Zap, Github, Twitter, Linkedin, Mail } from "lucide-react";
+import { Zap, Github, Twitter, Linkedin, Mail, Send } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    
+    setIsSubmitting(true);
+    // Simulate subscription - in production, connect to email service
+    await new Promise(resolve => setTimeout(resolve, 800));
+    toast.success("Subscribed! Welcome to the XPEX Neural newsletter.");
+    setEmail("");
+    setIsSubmitting(false);
+  };
 
   const links = {
     product: [
@@ -26,7 +44,7 @@ const Footer = () => {
   return (
     <footer className="border-t border-border/50 bg-card/30">
       <div className="container mx-auto px-4 py-16">
-        <div className="grid md:grid-cols-5 gap-12">
+        <div className="grid md:grid-cols-6 gap-12">
           {/* Brand */}
           <div className="md:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4">
@@ -130,6 +148,32 @@ const Footer = () => {
                 </li>
               ))}
             </ul>
+          </div>
+
+          {/* Newsletter */}
+          <div>
+            <h4 className="font-semibold mb-4">Newsletter</h4>
+            <p className="text-muted-foreground text-sm mb-4">
+              Stay updated with the latest APIs and agent economy insights.
+            </p>
+            <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
+              <Input
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-background/50 border-border/50 text-sm"
+                required
+              />
+              <Button 
+                type="submit" 
+                size="icon" 
+                disabled={isSubmitting}
+                className="shrink-0"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </form>
           </div>
         </div>
 

@@ -48,7 +48,7 @@ const App = () => (
               <Route path="/legal/sla" element={<SLA />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/status" element={<Status />} />
-              <Route path="/gold-email-validator" element={<GoldEmailValidator />} />
+              <Route path="/products/gold-email-validator" element={<GoldEmailValidator />} />
               <Route
                 path="/dashboard" 
                 element={

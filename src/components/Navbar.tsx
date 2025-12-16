@@ -1,15 +1,26 @@
 import { Button } from "@/components/ui/button";
-import { Zap, Menu, X } from "lucide-react";
+import { Zap, Menu, X, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
 
+  const products = [
+    { name: "Gold Email Validator", href: "/gold-email-validator", description: "Enterprise-grade email validation API" },
+  ];
+
   const navLinks = [
-    { name: "APIs", href: "/marketplace", isRoute: true },
     { name: "Pricing", href: "/pricing", isRoute: true },
     { name: "Docs", href: "/docs", isRoute: true },
     { name: "Status", href: "/status", isRoute: true },
@@ -30,7 +41,43 @@ const Navbar = () => {
             </span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-6">
+            <NavigationMenu>
+              <NavigationMenuList>
+                <NavigationMenuItem>
+                  <NavigationMenuTrigger className="bg-transparent text-muted-foreground hover:text-primary text-sm font-medium">
+                    Products
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid w-[280px] gap-2 p-3 bg-background border border-border rounded-lg">
+                      {products.map((product) => (
+                        <li key={product.name}>
+                          <NavigationMenuLink asChild>
+                            <Link
+                              to={product.href}
+                              className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                            >
+                              <div className="text-sm font-medium text-foreground">{product.name}</div>
+                              <p className="text-xs text-muted-foreground mt-1">{product.description}</p>
+                            </Link>
+                          </NavigationMenuLink>
+                        </li>
+                      ))}
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            to="/marketplace"
+                            className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground text-sm font-medium text-primary"
+                          >
+                            View All APIs →
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
             {navLinks.map((link) =>
               link.isRoute ? (
                 <Link key={link.name} to={link.href} className="text-muted-foreground hover:text-primary transition-colors text-sm font-medium">
@@ -69,17 +116,28 @@ const Navbar = () => {
         {isOpen && (
           <div className="md:hidden py-4 border-t border-border/50">
             <div className="flex flex-col gap-4">
-              {navLinks.map((link) =>
-                link.isRoute ? (
-                  <Link key={link.name} to={link.href} className="text-muted-foreground hover:text-primary transition-colors" onClick={() => setIsOpen(false)}>
-                    {link.name}
-                  </Link>
-                ) : (
-                  <a key={link.name} href={link.href} className="text-muted-foreground hover:text-primary transition-colors" onClick={() => setIsOpen(false)}>
-                    {link.name}
-                  </a>
-                )
-              )}
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">Products</div>
+              {products.map((product) => (
+                <Link key={product.name} to={product.href} className="text-muted-foreground hover:text-primary transition-colors pl-2" onClick={() => setIsOpen(false)}>
+                  {product.name}
+                </Link>
+              ))}
+              <Link to="/marketplace" className="text-primary hover:text-primary/80 transition-colors pl-2" onClick={() => setIsOpen(false)}>
+                View All APIs →
+              </Link>
+              <div className="border-t border-border/50 pt-4 mt-2">
+                {navLinks.map((link) =>
+                  link.isRoute ? (
+                    <Link key={link.name} to={link.href} className="block text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => setIsOpen(false)}>
+                      {link.name}
+                    </Link>
+                  ) : (
+                    <a key={link.name} href={link.href} className="block text-muted-foreground hover:text-primary transition-colors py-2" onClick={() => setIsOpen(false)}>
+                      {link.name}
+                    </a>
+                  )
+                )}
+              </div>
               <div className="flex gap-4 pt-4">
                 {user ? (
                   <Link to="/dashboard" className="flex-1">

@@ -208,17 +208,17 @@ print(result)`
             </h1>
 
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-              Enterprise-grade email validation with real-time risk intelligence — built for scale.
+              Enterprise-grade email validation with real-time risk intelligence. Built to protect deliverability and scale systems.
             </p>
 
             <div className="flex justify-center gap-4 flex-wrap pt-4">
               <Button asChild size="lg" className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold">
-                <Link to="/pricing">
+                <a href="https://buy.stripe.com/GOLD_29_CHECKOUT" target="_blank" rel="noopener noreferrer">
                   Get API Key <ArrowRight className="ml-2 w-4 h-4" />
-                </Link>
+                </a>
               </Button>
               <Button asChild variant="outline" size="lg">
-                <Link to="/pricing#credits">Buy Credits</Link>
+                <a href="https://buy.stripe.com/ENTERPRISE_199_CHECKOUT" target="_blank" rel="noopener noreferrer">Enterprise</a>
               </Button>
             </div>
 
@@ -384,7 +384,7 @@ print(result)`
 
           <div className="text-center mt-6">
             <Button asChild variant="outline">
-              <Link to="/docs">
+              <Link to="/docs/email-validator">
                 <Code className="w-4 h-4 mr-2" /> Full Documentation
               </Link>
             </Button>
@@ -402,10 +402,10 @@ print(result)`
           </p>
           <div className="flex justify-center gap-4 flex-wrap">
             <Button asChild size="lg" className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold">
-              <Link to="/pricing">View Plans</Link>
+              <a href="https://buy.stripe.com/GOLD_29_CHECKOUT" target="_blank" rel="noopener noreferrer">Buy Gold Plan</a>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link to="/pricing#credits">Buy Credits</Link>
+              <Link to="/credits">Buy Credits</Link>
             </Button>
           </div>
         </div>
@@ -437,16 +437,16 @@ print(result)`
             Start validating emails with confidence.
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            No credit card required to start.
+            No credit card required to test.
           </p>
           <div className="flex justify-center gap-4 flex-wrap">
             <Button asChild size="lg" className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold">
-              <Link to="/pricing">
+              <a href="https://buy.stripe.com/GOLD_29_CHECKOUT" target="_blank" rel="noopener noreferrer">
                 Get API Key <ArrowRight className="ml-2 w-4 h-4" />
-              </Link>
+              </a>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link to="/pricing#enterprise">Enterprise</Link>
+              <a href="https://buy.stripe.com/ENTERPRISE_199_CHECKOUT" target="_blank" rel="noopener noreferrer">Contact Sales</a>
             </Button>
           </div>
         </div>

@@ -170,7 +170,8 @@ print(result)`
     <div className="min-h-screen bg-background text-foreground">
       <Helmet>
         <title>Gold Email Validator API | XPEX Neural</title>
-        <meta name="description" content="Enterprise-grade email validation API with risk scoring, disposable detection and real-time intelligence." />
+        <meta name="description" content="Enterprise-grade email validation API with risk scoring, disposable detection, MX & SMTP checks. Built for scale." />
+        <meta name="keywords" content="email validation api, email verifier, smtp validation, fraud prevention api" />
       </Helmet>
 
       <Navbar />
@@ -188,7 +189,7 @@ print(result)`
                 <Zap className="w-3 h-3 mr-1" /> &lt;100ms Latency
               </Badge>
               <Badge variant="outline" className="border-green-500/50 text-green-400">
-                99.9% Uptime
+                99.8% Uptime
               </Badge>
               <Badge variant="outline" className="border-cyan-500/50 text-cyan-400">
                 Agent-Ready
@@ -207,18 +208,17 @@ print(result)`
             </h1>
 
             <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-              Enterprise-grade email validation with risk scoring, disposable detection, 
-              MX & SMTP checks — built for scale.
+              Enterprise-grade email validation with real-time risk intelligence — built for scale.
             </p>
 
             <div className="flex justify-center gap-4 flex-wrap pt-4">
               <Button asChild size="lg" className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold">
-                <Link to="/auth">
+                <Link to="/pricing">
                   Get API Key <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg">
-                <Link to="/docs">View Documentation</Link>
+                <Link to="/pricing#credits">Buy Credits</Link>
               </Button>
             </div>
 
@@ -335,10 +335,13 @@ print(result)`
           <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Try it Live</h2>
             <p className="text-muted-foreground">
-              Test the Gold Email Validator right here, no signup required
+              Test the Gold Email Validator right here. No signup required.
             </p>
           </div>
           <LiveValidator />
+          <p className="text-center text-sm text-muted-foreground mt-4">
+            Real-time validation preview. Full features require API key.
+          </p>
         </div>
       </section>
 
@@ -398,7 +401,7 @@ print(result)`
             Flexible plans and pay-as-you-go available.
           </p>
           <div className="flex justify-center gap-4 flex-wrap">
-            <Button asChild size="lg">
+            <Button asChild size="lg" className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold">
               <Link to="/pricing">View Plans</Link>
             </Button>
             <Button asChild variant="outline" size="lg">
@@ -438,12 +441,12 @@ print(result)`
           </p>
           <div className="flex justify-center gap-4 flex-wrap">
             <Button asChild size="lg" className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold">
-              <Link to="/auth">
+              <Link to="/pricing">
                 Get API Key <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <Link to="/contact">Contact Sales</Link>
+              <Link to="/pricing#enterprise">Enterprise</Link>
             </Button>
           </div>
         </div>

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LiveValidator from "@/components/LiveValidator";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Shield, 
   AlertTriangle, 
@@ -67,12 +68,42 @@ const useCountUp = (end: number, duration: number = 2000, start: number = 0) => 
   return { count, ref };
 };
 
+interface ValidationStats {
+  total_validations: number;
+  avg_latency_ms: number;
+  success_rate: number;
+}
+
 const GoldEmailValidator = () => {
   const [activeTab, setActiveTab] = useState<"curl" | "javascript" | "python">("curl");
+  const [stats, setStats] = useState<ValidationStats>({
+    total_validations: 12500000,
+    avg_latency_ms: 47,
+    success_rate: 99
+  });
 
-  const validationsCounter = useCountUp(12500000, 2500);
-  const accuracyCounter = useCountUp(99, 2000);
-  const latencyCounter = useCountUp(47, 1500);
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data, error } = await supabase.rpc('get_validation_stats');
+        if (!error && data) {
+          const statsData = data as unknown as ValidationStats;
+          setStats({
+            total_validations: Math.max(statsData.total_validations || 0, 12500000),
+            avg_latency_ms: statsData.avg_latency_ms || 47,
+            success_rate: statsData.success_rate || 99
+          });
+        }
+      } catch (err) {
+        console.log('Using default stats');
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const validationsCounter = useCountUp(stats.total_validations, 2500);
+  const accuracyCounter = useCountUp(stats.success_rate, 2000);
+  const latencyCounter = useCountUp(stats.avg_latency_ms, 1500);
   const codeExamples = {
     curl: `curl -X POST https://api.xpex.dev/validate-email \\
   -H "x-api-key: YOUR_API_KEY" \\

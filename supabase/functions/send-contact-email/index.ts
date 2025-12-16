@@ -1,7 +1,4 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,7 +13,38 @@ interface ContactEmailRequest {
   message: string;
 }
 
-const handler = async (req: Request): Promise<Response> => {
+async function sendEmail(to: string[], subject: string, html: string, replyTo?: string) {
+  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+  
+  if (!RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY is not configured");
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "XPEX Neural <onboarding@resend.dev>",
+      to,
+      subject,
+      html,
+      reply_to: replyTo,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("Resend API error:", error);
+    throw new Error(`Failed to send email: ${error}`);
+  }
+
+  return response.json();
+}
+
+serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -40,12 +68,10 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending contact email from:", email, "Subject:", subject);
 
     // Send notification email to support team
-    const notificationEmail = await resend.emails.send({
-      from: "XPEX Neural <onboarding@resend.dev>",
-      to: ["support@xpex.dev"],
-      replyTo: email,
-      subject: `[Contact Form] ${subject}`,
-      html: `
+    const notificationResult = await sendEmail(
+      ["support@xpex.dev"],
+      `[Contact Form] ${subject}`,
+      `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #00f5d4; border-bottom: 2px solid #00f5d4; padding-bottom: 10px;">New Contact Form Submission</h2>
           
@@ -65,16 +91,16 @@ const handler = async (req: Request): Promise<Response> => {
           </p>
         </div>
       `,
-    });
+      email
+    );
 
-    console.log("Notification email sent:", notificationEmail);
+    console.log("Notification email sent:", notificationResult);
 
     // Send confirmation email to user
-    const confirmationEmail = await resend.emails.send({
-      from: "XPEX Neural <onboarding@resend.dev>",
-      to: [email],
-      subject: "We received your message - XPEX Neural",
-      html: `
+    const confirmationResult = await sendEmail(
+      [email],
+      "We received your message - XPEX Neural",
+      `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h1 style="color: #00f5d4;">Thank you for contacting us, ${name}!</h1>
           
@@ -96,10 +122,10 @@ const handler = async (req: Request): Promise<Response> => {
             The XPEX Neural Team
           </p>
         </div>
-      `,
-    });
+      `
+    );
 
-    console.log("Confirmation email sent:", confirmationEmail);
+    console.log("Confirmation email sent:", confirmationResult);
 
     return new Response(
       JSON.stringify({ 
@@ -111,16 +137,15 @@ const handler = async (req: Request): Promise<Response> => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-contact-email function:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: message }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     );
   }
-};
-
-serve(handler);
+});

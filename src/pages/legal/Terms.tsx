@@ -142,10 +142,10 @@ const Terms = () => {
                 Questions about these terms?
               </h3>
               <p className="text-muted-foreground mb-6">
-                Contact us at{" "}
-                <a href="mailto:legal@xpex.io" className="text-primary hover:underline">
-                  legal@xpex.io
-                </a>
+              Contact us at{" "}
+              <a href="mailto:xpexneural@gmail.com" className="text-primary hover:underline">
+                xpexneural@gmail.com
+              </a>
               </p>
               <div className="flex flex-wrap justify-center gap-4 text-sm">
                 <Link to="/legal/privacy" className="text-muted-foreground hover:text-foreground transition-colors">

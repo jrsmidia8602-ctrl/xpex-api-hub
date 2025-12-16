@@ -62,7 +62,7 @@ const sections = [
   {
     icon: Mail,
     title: "12. Contact Us",
-    text: "For privacy-related questions or to exercise your rights, contact us at privacy@xpex.io. We will respond to requests within 30 days as required by applicable law."
+    text: "For privacy-related questions or to exercise your rights, contact us at xpexneural@gmail.com. We will respond to requests within 30 days as required by applicable law."
   }
 ];
 
@@ -142,10 +142,10 @@ const Privacy = () => {
                 Questions about your privacy?
               </h3>
               <p className="text-muted-foreground mb-6">
-                Contact our privacy team at{" "}
-                <a href="mailto:privacy@xpex.io" className="text-primary hover:underline">
-                  privacy@xpex.io
-                </a>
+              Contact our privacy team at{" "}
+              <a href="mailto:xpexneural@gmail.com" className="text-primary hover:underline">
+                xpexneural@gmail.com
+              </a>
               </p>
               <div className="flex flex-wrap justify-center gap-4 text-sm">
                 <Link to="/legal/terms" className="text-muted-foreground hover:text-foreground transition-colors">

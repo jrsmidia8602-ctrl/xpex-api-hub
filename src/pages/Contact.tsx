@@ -188,10 +188,10 @@ const Contact = () => {
             <p>
               For urgent matters, email us directly at{" "}
               <a
-                href="mailto:support@xpex.dev"
+                href="mailto:xpexneural@gmail.com"
                 className="text-primary hover:underline"
               >
-                support@xpex.dev
+                xpexneural@gmail.com
               </a>
             </p>
             <p className="mt-2">Average response time: &lt; 24 hours</p>

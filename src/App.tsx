@@ -22,6 +22,7 @@ import SLA from "./pages/legal/SLA";
 import Contact from "./pages/Contact";
 import Status from "./pages/Status";
 import GoldEmailValidator from "./pages/GoldEmailValidator";
+import Credits from "./pages/Credits";
 import NotFound from "./pages/NotFound";
 import CookieConsent from "./components/CookieConsent";
 
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/status" element={<Status />} />
               <Route path="/products/gold-email-validator" element={<GoldEmailValidator />} />
+              <Route path="/credits" element={<Credits />} />
               <Route
                 path="/dashboard" 
                 element={

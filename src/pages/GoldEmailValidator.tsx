@@ -334,7 +334,7 @@ print(result)`
 
           <div className="text-center mt-6">
             <Button asChild variant="outline">
-              <Link to="/docs/email-validator">
+              <Link to="/docs">
                 <Code className="w-4 h-4 mr-2" /> Full Documentation
               </Link>
             </Button>

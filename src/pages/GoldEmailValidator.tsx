@@ -7,73 +7,50 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LiveValidator from "@/components/LiveValidator";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Shield, 
-  AlertTriangle, 
-  Server, 
-  Globe, 
-  Sparkles, 
-  Zap, 
-  CheckCircle,
-  ArrowRight,
-  Copy,
-  Code,
-  Mail,
-  TrendingUp,
-  Clock
-} from "lucide-react";
+import { Shield, AlertTriangle, Server, Globe, Sparkles, Zap, CheckCircle, ArrowRight, Copy, Code, Mail, TrendingUp, Clock } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-
 const useCountUp = (end: number, duration: number = 2000, start: number = 0) => {
   const [count, setCount] = useState(start);
   const [hasStarted, setHasStarted] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !hasStarted) {
-          setHasStarted(true);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !hasStarted) {
+        setHasStarted(true);
+      }
+    }, {
+      threshold: 0.1
+    });
     if (ref.current) {
       observer.observe(ref.current);
     }
-
     return () => observer.disconnect();
   }, [hasStarted]);
-
   useEffect(() => {
     if (!hasStarted) return;
-
     let startTime: number;
     const animate = (currentTime: number) => {
       if (!startTime) startTime = currentTime;
       const progress = Math.min((currentTime - startTime) / duration, 1);
       const easeOut = 1 - Math.pow(1 - progress, 3);
       setCount(Math.floor(easeOut * (end - start) + start));
-
       if (progress < 1) {
         requestAnimationFrame(animate);
       }
     };
-
     requestAnimationFrame(animate);
   }, [hasStarted, end, duration, start]);
-
-  return { count, ref };
+  return {
+    count,
+    ref
+  };
 };
-
 interface ValidationStats {
   total_validations: number;
   avg_latency_ms: number;
   success_rate: number;
 }
-
 const GoldEmailValidator = () => {
   const [activeTab, setActiveTab] = useState<"curl" | "javascript" | "python">("curl");
   const [stats, setStats] = useState<ValidationStats>({
@@ -81,11 +58,13 @@ const GoldEmailValidator = () => {
     avg_latency_ms: 47,
     success_rate: 99
   });
-
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const { data, error } = await supabase.rpc('get_validation_stats');
+        const {
+          data,
+          error
+        } = await supabase.rpc('get_validation_stats');
         if (!error && data) {
           const statsData = data as unknown as ValidationStats;
           setStats({
@@ -98,13 +77,10 @@ const GoldEmailValidator = () => {
         console.log('Using default stats');
       }
     };
-    
     fetchStats();
     const interval = setInterval(fetchStats, 30000);
-    
     return () => clearInterval(interval);
   }, []);
-
   const validationsCounter = useCountUp(stats.total_validations, 2500);
   const accuracyCounter = useCountUp(stats.success_rate, 2000);
   const latencyCounter = useCountUp(stats.avg_latency_ms, 1500);
@@ -138,36 +114,34 @@ response = requests.post(
 result = response.json()
 print(result)`
   };
-
   const copyCode = () => {
     navigator.clipboard.writeText(codeExamples[activeTab]);
     toast.success("Code copied to clipboard");
   };
-
-  const features = [
-    { title: "Risk Scoring", description: "Advanced 0–100 risk score per email", icon: Shield },
-    { title: "Disposable Detection", description: "Detect temporary and burner email providers", icon: AlertTriangle },
-    { title: "MX & SMTP Validation", description: "Deep infrastructure-level validation", icon: Server },
-    { title: "Domain Intelligence", description: "Reputation and domain analysis", icon: Globe },
-    { title: "AI-Assisted Validation", description: "Machine-assisted confidence scoring", icon: Sparkles },
-  ];
-
-  const useCases = [
-    "Email Marketing Platforms",
-    "SaaS Onboarding",
-    "E-commerce Checkout",
-    "Autonomous Agents",
-    "Fraud Prevention Systems",
-  ];
-
-  const problems = [
-    "Invalid emails cause hard bounces",
-    "Disposable emails pollute databases",
-    "Poor validation damages sender reputation",
-  ];
-
-  return (
-    <div className="min-h-screen bg-background text-foreground">
+  const features = [{
+    title: "Risk Scoring",
+    description: "Advanced 0–100 risk score per email",
+    icon: Shield
+  }, {
+    title: "Disposable Detection",
+    description: "Detect temporary and burner email providers",
+    icon: AlertTriangle
+  }, {
+    title: "MX & SMTP Validation",
+    description: "Deep infrastructure-level validation",
+    icon: Server
+  }, {
+    title: "Domain Intelligence",
+    description: "Reputation and domain analysis",
+    icon: Globe
+  }, {
+    title: "AI-Assisted Validation",
+    description: "Machine-assisted confidence scoring",
+    icon: Sparkles
+  }];
+  const useCases = ["Email Marketing Platforms", "SaaS Onboarding", "E-commerce Checkout", "Autonomous Agents", "Fraud Prevention Systems"];
+  const problems = ["Invalid emails cause hard bounces", "Disposable emails pollute databases", "Poor validation damages sender reputation"];
+  return <div className="min-h-screen bg-background text-foreground">
       <Helmet>
         <title>Gold Email Validator API | XPEX Neural</title>
         <meta name="description" content="Enterprise-grade email validation API with risk scoring, disposable detection, MX & SMTP checks. Built for scale." />
@@ -263,12 +237,10 @@ print(result)`
             <div className="space-y-6">
               <h2 className="text-2xl md:text-3xl font-bold">The Problem</h2>
               <ul className="space-y-4">
-                {problems.map((problem, i) => (
-                  <li key={i} className="flex items-start gap-3">
+                {problems.map((problem, i) => <li key={i} className="flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
                     <span className="text-muted-foreground">{problem}</span>
-                  </li>
-                ))}
+                  </li>)}
               </ul>
             </div>
             <Card className="p-6 bg-card/50 backdrop-blur border-primary/30">
@@ -293,13 +265,11 @@ print(result)`
             </p>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, i) => (
-              <Card key={i} className="p-6 bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-colors group">
+            {features.map((feature, i) => <Card key={i} className="p-6 bg-card/50 backdrop-blur border-border/50 hover:border-primary/50 transition-colors group">
                 <feature.icon className="w-10 h-10 text-primary mb-4 group-hover:scale-110 transition-transform" />
                 <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
                 <p className="text-sm text-muted-foreground">{feature.description}</p>
-              </Card>
-            ))}
+              </Card>)}
           </div>
         </div>
       </section>
@@ -314,17 +284,10 @@ print(result)`
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              "<100ms average response time",
-              "Global edge infrastructure",
-              "Auto-scaling under load",
-              "Rate limiting and abuse protection",
-            ].map((metric, i) => (
-              <div key={i} className="flex items-center gap-3 p-4 rounded-lg bg-card/30 border border-border/50">
+            {["<100ms average response time", "Global edge infrastructure", "Auto-scaling under load", "Rate limiting and abuse protection"].map((metric, i) => <div key={i} className="flex items-center gap-3 p-4 rounded-lg bg-card/30 border border-border/50">
                 <CheckCircle className="w-5 h-5 text-green-500 shrink-0" />
                 <span className="text-sm">{metric}</span>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
       </section>
@@ -357,23 +320,10 @@ print(result)`
           
           <Card className="bg-card/50 backdrop-blur border-border/50 overflow-hidden">
             <div className="flex border-b border-border/50">
-              {(["curl", "javascript", "python"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-3 text-sm font-medium transition-colors ${
-                    activeTab === tab
-                      ? "bg-primary/10 text-primary border-b-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
+              {(["curl", "javascript", "python"] as const).map(tab => <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-3 text-sm font-medium transition-colors ${activeTab === tab ? "bg-primary/10 text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"}`}>
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </button>
-              ))}
-              <button
-                onClick={copyCode}
-                className="ml-auto px-4 py-3 text-sm text-muted-foreground hover:text-foreground flex items-center gap-2"
-              >
+                </button>)}
+              <button onClick={copyCode} className="ml-auto px-4 py-3 text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
                 <Copy className="w-4 h-4" /> Copy
               </button>
             </div>
@@ -402,7 +352,7 @@ print(result)`
           </p>
           <div className="flex justify-center gap-4 flex-wrap">
             <Button asChild size="lg" className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold">
-              <a href="https://buy.stripe.com/GOLD_29_CHECKOUT" target="_blank" rel="noopener noreferrer">Buy Gold Plan</a>
+              <a target="_blank" rel="noopener noreferrer" href="https://buy.stripe.com/7sY5kD0TN7UT3wx3El1B609">Buy Gold Plan</a>
             </Button>
             <Button asChild variant="outline" size="lg">
               <Link to="/credits">Buy Credits</Link>
@@ -421,11 +371,9 @@ print(result)`
             </p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {useCases.map((useCase, i) => (
-              <Card key={i} className="p-4 text-center bg-card/30 border-border/50 hover:border-primary/50 transition-colors">
+            {useCases.map((useCase, i) => <Card key={i} className="p-4 text-center bg-card/30 border-border/50 hover:border-primary/50 transition-colors">
                 <span className="text-sm font-medium">{useCase}</span>
-              </Card>
-            ))}
+              </Card>)}
           </div>
         </div>
       </section>
@@ -453,8 +401,6 @@ print(result)`
       </section>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default GoldEmailValidator;

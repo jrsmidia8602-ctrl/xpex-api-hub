@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Shield, AlertTriangle, Server, Globe, Sparkles, Zap, CheckCircle, ArrowRight, Copy, Code, Mail, TrendingUp, Clock } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { useSubscription } from "@/hooks/useSubscription";
 const useCountUp = (end: number, duration: number = 2000, start: number = 0) => {
   const [count, setCount] = useState(start);
   const [hasStarted, setHasStarted] = useState(false);
@@ -53,11 +55,28 @@ interface ValidationStats {
 }
 const GoldEmailValidator = () => {
   const [activeTab, setActiveTab] = useState<"curl" | "javascript" | "python">("curl");
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { startCheckout } = useSubscription();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<ValidationStats>({
     total_validations: 12500000,
     avg_latency_ms: 47,
     success_rate: 99
   });
+
+  const handleCheckout = async (tier: 'pro' | 'enterprise') => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    setCheckoutLoading(tier);
+    try {
+      await startCheckout(tier);
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -191,8 +210,13 @@ print(result)`
                   Get API Key <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg">
-                <a target="_blank" rel="noopener noreferrer" href="https://buy.stripe.com/3cI9AT7ib4IHfff7UB1B60a">Enterprise</a>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                onClick={() => handleCheckout('enterprise')}
+                disabled={checkoutLoading === 'enterprise'}
+              >
+                {checkoutLoading === 'enterprise' ? 'Loading...' : 'Enterprise'}
               </Button>
             </div>
 
@@ -351,8 +375,13 @@ print(result)`
             Flexible plans and pay-as-you-go available.
           </p>
           <div className="flex justify-center gap-4 flex-wrap">
-            <Button asChild size="lg" className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold">
-              <a target="_blank" rel="noopener noreferrer" href="https://buy.stripe.com/7sY5kD0TN7UT3wx3El1B609">Buy Gold Plan</a>
+            <Button 
+              size="lg" 
+              className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold"
+              onClick={() => handleCheckout('pro')}
+              disabled={checkoutLoading === 'pro'}
+            >
+              {checkoutLoading === 'pro' ? 'Loading...' : 'Buy Gold Plan'}
             </Button>
             <Button asChild variant="outline" size="lg">
               <Link to="/credits">Buy Credits</Link>

@@ -394,7 +394,7 @@ print(result)`
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg">
-              <a href="https://buy.stripe.com/ENTERPRISE_199_CHECKOUT" target="_blank" rel="noopener noreferrer">Contact Sales</a>
+              <Link to="/contact">Contact Sales</Link>
             </Button>
           </div>
         </div>

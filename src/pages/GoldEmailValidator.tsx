@@ -192,7 +192,7 @@ print(result)`
                 </a>
               </Button>
               <Button asChild variant="outline" size="lg">
-                <a href="https://buy.stripe.com/ENTERPRISE_199_CHECKOUT" target="_blank" rel="noopener noreferrer">Enterprise</a>
+                <a target="_blank" rel="noopener noreferrer" href="https://buy.stripe.com/3cI9AT7ib4IHfff7UB1B60a">Enterprise</a>
               </Button>
             </div>
 

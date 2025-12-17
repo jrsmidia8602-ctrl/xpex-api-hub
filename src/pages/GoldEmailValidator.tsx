@@ -187,9 +187,9 @@ print(result)`
 
             <div className="flex justify-center gap-4 flex-wrap pt-4">
               <Button asChild size="lg" className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-black font-semibold">
-                <a href="https://buy.stripe.com/GOLD_29_CHECKOUT" target="_blank" rel="noopener noreferrer">
+                <Link to="/auth">
                   Get API Key <ArrowRight className="ml-2 w-4 h-4" />
-                </a>
+                </Link>
               </Button>
               <Button asChild variant="outline" size="lg">
                 <a target="_blank" rel="noopener noreferrer" href="https://buy.stripe.com/3cI9AT7ib4IHfff7UB1B60a">Enterprise</a>

@@ -27,7 +27,10 @@ export const useSubscription = () => {
   const { user, session } = useAuth();
 
   const checkSubscription = useCallback(async () => {
-    if (!session?.access_token) {
+    // Get fresh session to ensure token is not expired
+    const { data: { session: freshSession } } = await supabase.auth.getSession();
+    
+    if (!freshSession?.access_token) {
       setSubscription({
         subscribed: false,
         tier: 'free',
@@ -41,7 +44,7 @@ export const useSubscription = () => {
     try {
       const { data, error } = await supabase.functions.invoke('check-subscription', {
         headers: {
-          Authorization: `Bearer ${session.access_token}`
+          Authorization: `Bearer ${freshSession.access_token}`
         }
       });
 
@@ -58,7 +61,7 @@ export const useSubscription = () => {
     } finally {
       setLoading(false);
     }
-  }, [session?.access_token]);
+  }, [user]);
 
   useEffect(() => {
     checkSubscription();
@@ -71,7 +74,10 @@ export const useSubscription = () => {
   }, [checkSubscription]);
 
   const startCheckout = async (tier: 'pro' | 'enterprise') => {
-    if (!session?.access_token) {
+    // Get fresh session to ensure token is not expired
+    const { data: { session: freshSession } } = await supabase.auth.getSession();
+    
+    if (!freshSession?.access_token) {
       toast.error('Please sign in to subscribe');
       return;
     }
@@ -79,7 +85,7 @@ export const useSubscription = () => {
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         headers: {
-          Authorization: `Bearer ${session.access_token}`
+          Authorization: `Bearer ${freshSession.access_token}`
         },
         body: {
           priceId: STRIPE_PRICES[tier],
@@ -99,7 +105,10 @@ export const useSubscription = () => {
   };
 
   const openCustomerPortal = async () => {
-    if (!session?.access_token) {
+    // Get fresh session to ensure token is not expired
+    const { data: { session: freshSession } } = await supabase.auth.getSession();
+    
+    if (!freshSession?.access_token) {
       toast.error('Please sign in first');
       return;
     }
@@ -107,7 +116,7 @@ export const useSubscription = () => {
     try {
       const { data, error } = await supabase.functions.invoke('customer-portal', {
         headers: {
-          Authorization: `Bearer ${session.access_token}`
+          Authorization: `Bearer ${freshSession.access_token}`
         }
       });
 

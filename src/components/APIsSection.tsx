@@ -3,47 +3,47 @@ import { Mail, Sparkles, ShoppingCart, Shield, Globe, Link } from "lucide-react"
 
 const apis = [
   {
-    name: "Gold Email Validator",
-    description: "Professional email validation with disposable detection, risk scoring, and MX verification. Trusted by enterprises.",
+    name: "GoldMail Validator",
+    description: "Validação profissional de email com detecção de descartáveis, scoring de risco e verificação MX.",
     icon: Mail,
-    price: "From $0.001/call",
+    price: "A partir de $0.001/chamada",
     color: "cyan" as const,
     featured: true,
   },
   {
-    name: "CopyVoraz",
-    description: "Generate viral, high-conversion copy powered by AI.",
-    icon: Sparkles,
-    price: "$0.03/call",
-    color: "purple" as const,
-  },
-  {
-    name: "ExtrairProdutos",
-    description: "Structured scraping from any marketplace.",
-    icon: ShoppingCart,
-    price: "$0.005/call",
-    color: "green" as const,
-  },
-  {
-    name: "BreachScan",
-    description: "Check if emails or domains appear in data breaches.",
+    name: "Bridge Scan",
+    description: "Verifique se emails ou domínios aparecem em vazamentos de dados.",
     icon: Shield,
-    price: "$0.01/call",
+    price: "$0.01/chamada",
     color: "orange" as const,
   },
   {
-    name: "IPInsight",
-    description: "Geolocation, VPN/proxy detection, threat analysis.",
+    name: "IP Insight",
+    description: "Geolocalização, detecção de VPN/proxy, análise de ameaças.",
     icon: Globe,
-    price: "$0.008/call",
+    price: "$0.008/chamada",
     color: "pink" as const,
   },
   {
-    name: "LinkMedic",
-    description: "Bulk URL health checking and uptime monitoring.",
+    name: "Link Magic",
+    description: "Verificação em lote de saúde de URLs e monitoramento de uptime.",
     icon: Link,
-    price: "$0.005/call",
+    price: "$0.005/chamada",
     color: "cyan" as const,
+  },
+  {
+    name: "Copy Vorals",
+    description: "Gere copy viral e de alta conversão com IA.",
+    icon: Sparkles,
+    price: "$0.03/chamada",
+    color: "purple" as const,
+  },
+  {
+    name: "Extrair Produtos",
+    description: "Scraping estruturado de qualquer marketplace.",
+    icon: ShoppingCart,
+    price: "$0.005/chamada",
+    color: "green" as const,
   },
 ];
 
@@ -54,11 +54,11 @@ const APIsSection = () => {
         {/* Header */}
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            <span className="text-foreground">API</span>{" "}
-            <span className="text-gradient">Portfolio</span>
+            <span className="text-foreground">Portfólio de</span>{" "}
+            <span className="text-gradient">APIs</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Production-ready APIs that enterprises, AIs, and autonomous agents discover and pay for automatically.
+            APIs prontas para produção que empresas, IAs e agentes autônomos descobrem e pagam automaticamente.
           </p>
         </div>
 

@@ -29,28 +29,30 @@ const HeroSection = () => {
 
           {/* Headline */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            <span className="text-foreground">Build APIs.</span>
+            <span className="text-foreground">Construa APIs Premium</span>
             <br />
-            <span className="text-gradient">Agents Work For You.</span>
-            <br />
-            <span className="text-foreground">Money Flows In.</span>
+            <span className="text-gradient">com XPEX Neural</span>
           </h1>
 
           {/* Subheadline */}
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
-            Create autonomous wealth engines — APIs that enterprises, AIs, and agents 
-            discover, use, and pay for automatically.
+            Agentes autônomos criam valor, você monitora e monetiza. 
+            APIs que empresas, IAs e agentes descobrem, usam e pagam automaticamente.
           </p>
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-            <Button variant="cyber" size="xl" className="group w-full sm:w-auto">
-              Start Building Free
-              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+            <Button variant="cyber" size="xl" className="group w-full sm:w-auto" asChild>
+              <a href="/auth">
+                Comece a Construir
+                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+              </a>
             </Button>
-            <Button variant="glass" size="xl" className="w-full sm:w-auto">
-              <Play className="w-5 h-5" />
-              Watch Demo
+            <Button variant="glass" size="xl" className="w-full sm:w-auto" asChild>
+              <a href="/gold-email-validator">
+                <Play className="w-5 h-5" />
+                Assista a Demo
+              </a>
             </Button>
           </div>
 
@@ -62,8 +64,8 @@ const HeroSection = () => {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-8 mt-16 animate-fade-in" style={{ animationDelay: "0.4s" }}>
             {[
-              { value: "6+", label: "APIs Ready" },
-              { value: "<100ms", label: "Latency" },
+              { value: "6+", label: "APIs Prontas" },
+              { value: "<100ms", label: "Latência" },
               { value: "99.9%", label: "Uptime" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">

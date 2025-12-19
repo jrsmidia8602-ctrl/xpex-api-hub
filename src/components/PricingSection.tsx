@@ -7,58 +7,58 @@ import CreditPackages from "./CreditPackages";
 
 const plans = [
   {
-    name: "Free",
-    description: "Perfect for testing and small projects",
+    name: "Grátis",
+    description: "Perfeito para testes e pequenos projetos",
     price: "$0",
-    period: "/month",
+    period: "/mês",
     icon: Zap,
     features: [
-      "100 API calls/month",
-      "All APIs access",
-      "Community support",
-      "Basic analytics",
-      "Standard latency",
+      "20.000 chamadas API",
+      "Acesso ao portfólio completo",
+      "Suporte da comunidade",
+      "Analytics básico",
+      "Latência padrão",
     ],
-    cta: "Get Started",
+    cta: "Começar Grátis",
     tier: "free" as const,
     popular: false,
   },
   {
-    name: "Pro",
-    description: "For growing businesses and power users",
+    name: "PRO",
+    description: "Para negócios em crescimento e power users",
     price: "$29",
-    period: "/month",
+    period: "/mês",
     icon: Rocket,
     features: [
-      "20,000 API calls/month",
-      "All APIs access",
-      "Priority support",
-      "Advanced analytics",
-      "Low latency (<50ms)",
-      "Webhook notifications",
-      "Custom rate limits",
+      "20.000 chamadas API/mês",
+      "Acesso completo às APIs",
+      "Suporte prioritário",
+      "Analytics avançado",
+      "Baixa latência (<50ms)",
+      "Notificações via Webhook",
+      "Rate limits customizados",
     ],
-    cta: "Start Pro Trial",
+    cta: "Iniciar PRO",
     tier: "pro" as const,
     popular: true,
   },
   {
     name: "Enterprise",
-    description: "Custom solutions for large organizations",
+    description: "Soluções customizadas para grandes organizações",
     price: "$199",
-    period: "/month",
+    period: "/mês",
     icon: Building2,
     features: [
-      "Unlimited API calls",
-      "Dedicated infrastructure",
-      "24/7 premium support",
-      "Custom SLA (99.99%)",
-      "Ultra-low latency",
-      "White-label options",
-      "On-premise deployment",
-      "Custom integrations",
+      "Chamadas API ilimitadas",
+      "Infraestrutura dedicada",
+      "Suporte premium 24/7",
+      "SLA customizado (99.99%)",
+      "Latência ultra-baixa",
+      "Opções white-label",
+      "Deploy on-premise",
+      "Integrações customizadas",
     ],
-    cta: "Start Enterprise",
+    cta: "Iniciar Enterprise",
     tier: "enterprise" as const,
     popular: false,
   },
@@ -92,13 +92,13 @@ const PricingSection = () => {
         {/* Header */}
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            <span className="text-foreground">Simple,</span>{" "}
-            <span className="text-gradient">Transparent</span>{" "}
-            <span className="text-foreground">Pricing</span>
+            <span className="text-foreground">Preços</span>{" "}
+            <span className="text-gradient">Simples</span>{" "}
+            <span className="text-foreground">e Transparentes</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Start free, scale as you grow. Pay only for what you use.
-            All plans include access to our complete API portfolio.
+            Comece grátis, escale conforme cresce. Pague apenas pelo que usar.
+            Todos os planos incluem acesso ao portfólio completo de APIs.
           </p>
         </div>
 
@@ -121,13 +121,13 @@ const PricingSection = () => {
               >
                 {plan.popular && !isCurrentPlan && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-primary to-accent text-primary-foreground text-sm font-semibold rounded-full">
-                    Most Popular
+                    Mais Popular
                   </div>
                 )}
                 
                 {isCurrentPlan && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-green-500 to-green-400 text-white text-sm font-semibold rounded-full">
-                    Your Plan
+                    Seu Plano
                   </div>
                 )}
 
@@ -172,7 +172,7 @@ const PricingSection = () => {
                   onClick={() => handlePlanClick(plan.tier)}
                   disabled={isCurrentPlan}
                 >
-                  {isCurrentPlan ? 'Current Plan' : plan.cta}
+                  {isCurrentPlan ? 'Plano Atual' : plan.cta}
                 </Button>
               </div>
             );
@@ -181,7 +181,7 @@ const PricingSection = () => {
 
         {/* Bottom Note */}
         <p className="text-center text-sm text-muted-foreground mt-12">
-          All prices in USD. Need more? Volume discounts available for 100k+ calls/month.
+          Todos os preços em USD. Precisa de mais? Descontos por volume disponíveis para 100k+ chamadas/mês.
         </p>
 
         {/* Credit Packages */}

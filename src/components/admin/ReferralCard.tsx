@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Users, Gift, Copy, Share2, TrendingUp, Check } from 'lucide-react';
 import { useReferrals } from '@/hooks/useReferrals';
+import { ReferralBadge, TierProgress } from './ReferralBadge';
 
 export const ReferralCard = () => {
   const { stats, referrals, loading, copyReferralLink, applyReferralCode } = useReferrals();
@@ -44,10 +45,13 @@ export const ReferralCard = () => {
       <div className="absolute top-0 right-0 w-32 h-32 bg-neon-purple/10 rounded-full blur-3xl" />
       
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-display flex items-center gap-2">
-          <Users className="h-5 w-5 text-neon-purple" />
-          Programa de Indicação
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-display flex items-center gap-2">
+            <Users className="h-5 w-5 text-neon-purple" />
+            Programa de Indicação
+          </CardTitle>
+          <ReferralBadge completedReferrals={stats?.completedReferrals || 0} />
+        </div>
       </CardHeader>
       
       <CardContent className="space-y-6">
@@ -73,6 +77,9 @@ export const ReferralCard = () => {
             </div>
           </div>
         </div>
+
+        {/* Tier Progress */}
+        <TierProgress completedReferrals={stats?.completedReferrals || 0} />
 
         {/* Referral Code */}
         {stats?.referralCode && (

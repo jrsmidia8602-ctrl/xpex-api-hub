@@ -1,7 +1,7 @@
 // Analytics tracking utility for conversion events
 // Integrated with Google Analytics 4 and Mixpanel
 
-type EventName = 
+type EventName =
   | 'cta_click'
   | 'checkout_initiated'
   | 'api_key_generated'

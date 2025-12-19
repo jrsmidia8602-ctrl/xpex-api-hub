@@ -28,9 +28,14 @@ declare global {
       track: (event: string, properties?: object) => void;
       track_pageview: (properties?: object) => void;
       identify: (id: string) => void;
+      reset: () => void;
       people: {
         set: (properties: object) => void;
+        set_once: (properties: object) => void;
+        increment: (property: string, value?: number) => void;
       };
+      register: (properties: object) => void;
+      time_event: (eventName: string) => void;
     };
   }
 }
@@ -188,11 +193,117 @@ class Analytics {
   }
 
   trackSignupStarted(method?: string) {
+    // Start timing the signup funnel
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.time_event('Signup Completed');
+    }
     this.track('signup_started', { method });
   }
 
   trackLoginCompleted(method?: string) {
     this.track('login_completed', { method });
+  }
+
+  // User identification for Mixpanel
+  identifyUser(userId: string, email?: string, properties?: Record<string, any>) {
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      // Identify the user
+      window.mixpanel.identify(userId);
+      
+      // Set user profile properties
+      window.mixpanel.people.set({
+        $email: email,
+        $last_login: new Date().toISOString(),
+        ...properties,
+      });
+
+      // Set properties that should only be set once
+      window.mixpanel.people.set_once({
+        $created: new Date().toISOString(),
+        first_seen: new Date().toISOString(),
+      });
+
+      // Register super properties for all future events
+      window.mixpanel.register({
+        user_id: userId,
+        user_email: email,
+      });
+
+      console.log('[Analytics] User identified:', userId);
+    }
+
+    // Also set user ID in GA4
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('set', 'user_id', userId);
+      window.gtag('set', 'user_properties', {
+        email: email,
+        ...properties,
+      });
+    }
+  }
+
+  // Reset user identity on logout
+  resetUser() {
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.reset();
+      console.log('[Analytics] User identity reset');
+    }
+  }
+
+  // Funnel tracking methods
+  startCheckoutFunnel(tier: string, priceId?: string) {
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.time_event('Checkout Completed');
+    }
+    this.trackCheckoutInitiated(tier, undefined, priceId);
+  }
+
+  completeCheckout(tier: string, price: number, transactionId?: string) {
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.track('Checkout Completed', {
+        tier,
+        price,
+        currency: 'USD',
+        transaction_id: transactionId,
+      });
+      
+      // Increment purchase count
+      window.mixpanel.people.increment('total_purchases');
+      window.mixpanel.people.set({
+        last_purchase_date: new Date().toISOString(),
+        last_purchase_tier: tier,
+      });
+    }
+  }
+
+  completePurchase(packageName: string, credits: number, price: number, transactionId?: string) {
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.track('Purchase Completed', {
+        package_name: packageName,
+        credits,
+        price,
+        currency: 'USD',
+        transaction_id: transactionId,
+      });
+      
+      // Update user profile
+      window.mixpanel.people.increment('total_credits_purchased', credits);
+      window.mixpanel.people.increment('total_spent', price);
+      window.mixpanel.people.set({
+        last_purchase_date: new Date().toISOString(),
+      });
+    }
+  }
+
+  completeSignup(userId: string, email: string, method?: string) {
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.track('Signup Completed', {
+        method,
+        user_id: userId,
+      });
+    }
+    // Identify the new user
+    this.identifyUser(userId, email, { signup_method: method });
   }
 }
 

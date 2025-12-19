@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { analytics } from '@/lib/analytics';
 
 interface AuthContextType {
   user: User | null;
@@ -25,6 +26,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Identify user in Mixpanel on auth state change
+        if (session?.user) {
+          setTimeout(() => {
+            analytics.identifyUser(
+              session.user.id,
+              session.user.email,
+              {
+                provider: session.user.app_metadata?.provider,
+                full_name: session.user.user_metadata?.full_name,
+              }
+            );
+            
+            if (event === 'SIGNED_IN') {
+              analytics.trackLoginCompleted(session.user.app_metadata?.provider || 'email');
+            }
+          }, 0);
+        } else if (event === 'SIGNED_OUT') {
+          analytics.resetUser();
+        }
       }
     );
 
@@ -33,6 +54,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // Identify existing user
+      if (session?.user) {
+        analytics.identifyUser(
+          session.user.id,
+          session.user.email,
+          {
+            provider: session.user.app_metadata?.provider,
+            full_name: session.user.user_metadata?.full_name,
+          }
+        );
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -41,7 +74,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (email: string, password: string, fullName?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    // Track signup started
+    analytics.trackSignupStarted('email');
+    
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -51,6 +87,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     });
+    
+    // Track signup completion if successful
+    if (!error && data.user) {
+      analytics.completeSignup(data.user.id, email, 'email');
+    }
+    
     return { error };
   };
 

@@ -13,8 +13,12 @@ import {
   RefreshCw,
   ArrowUpRight,
   ArrowDownRight,
+  Download,
+  FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ConversionMetric {
   name: string;
@@ -31,7 +35,9 @@ interface FunnelStep {
 }
 
 export const AnalyticsDashboard = () => {
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [metrics, setMetrics] = useState<ConversionMetric[]>([]);
   const [funnelData, setFunnelData] = useState<FunnelStep[]>([]);
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
@@ -40,6 +46,173 @@ export const AnalyticsDashboard = () => {
     avgLatency: 0,
     successRate: 0,
   });
+
+  // Export to CSV
+  const exportToCSV = () => {
+    setExporting(true);
+    try {
+      const now = new Date().toISOString().split('T')[0];
+      
+      // Build CSV content
+      let csvContent = "XPEX Analytics Report\n";
+      csvContent += `Generated: ${new Date().toLocaleString()}\n\n`;
+      
+      // Metrics section
+      csvContent += "KEY METRICS\n";
+      csvContent += "Metric,Value,Change %\n";
+      metrics.forEach(m => {
+        csvContent += `${m.name},${m.value},${m.change}%\n`;
+      });
+      
+      csvContent += "\nPERFORMANCE STATS\n";
+      csvContent += "Metric,Value\n";
+      csvContent += `Total Validations,${stats.totalValidations}\n`;
+      csvContent += `Average Latency,${stats.avgLatency}ms\n`;
+      csvContent += `Success Rate,${stats.successRate}%\n`;
+      
+      // Funnel section
+      csvContent += "\nCONVERSION FUNNEL\n";
+      csvContent += "Step,Count,Percentage\n";
+      funnelData.forEach(f => {
+        csvContent += `${f.name},${f.count},${f.percentage.toFixed(2)}%\n`;
+      });
+      
+      // Recent events
+      csvContent += "\nRECENT EVENTS\n";
+      csvContent += "Event,Timestamp,Page\n";
+      recentEvents.forEach(e => {
+        csvContent += `${e.name},${e.properties?.timestamp || ''},${e.properties?.page_path || ''}\n`;
+      });
+      
+      // Download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `xpex-analytics-${now}.csv`;
+      link.click();
+      
+      toast({
+        title: "Exportado com sucesso",
+        description: "Relatório CSV baixado.",
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Erro na exportação",
+        description: "Não foi possível exportar o relatório.",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  // Export to PDF (HTML-based)
+  const exportToPDF = () => {
+    setExporting(true);
+    try {
+      const now = new Date().toISOString().split('T')[0];
+      
+      // Build HTML content for print
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>XPEX Analytics Report - ${now}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+            h1 { color: #6366f1; border-bottom: 2px solid #6366f1; padding-bottom: 10px; }
+            h2 { color: #4f46e5; margin-top: 30px; }
+            table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background: #f3f4f6; }
+            .metric-card { display: inline-block; width: 22%; margin: 1%; padding: 15px; background: #f9fafb; border-radius: 8px; }
+            .metric-value { font-size: 24px; font-weight: bold; color: #4f46e5; }
+            .metric-label { font-size: 12px; color: #6b7280; }
+            .funnel-bar { height: 25px; background: linear-gradient(90deg, #6366f1, #a5b4fc); border-radius: 4px; margin: 5px 0; }
+            .footer { margin-top: 40px; font-size: 12px; color: #9ca3af; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <h1>XPEX Neural - Analytics Report</h1>
+          <p>Generated: ${new Date().toLocaleString()}</p>
+          
+          <h2>Key Metrics</h2>
+          <div>
+            ${metrics.map(m => `
+              <div class="metric-card">
+                <div class="metric-value">${m.value.toLocaleString()}</div>
+                <div class="metric-label">${m.name}</div>
+                <div style="color: ${m.change >= 0 ? 'green' : 'red'}">
+                  ${m.change >= 0 ? '↑' : '↓'} ${Math.abs(m.change)}%
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          
+          <h2>Performance Statistics</h2>
+          <table>
+            <tr><th>Metric</th><th>Value</th></tr>
+            <tr><td>Total Validations</td><td>${stats.totalValidations.toLocaleString()}</td></tr>
+            <tr><td>Average Latency</td><td>${stats.avgLatency}ms</td></tr>
+            <tr><td>Success Rate</td><td>${stats.successRate}%</td></tr>
+          </table>
+          
+          <h2>Conversion Funnel</h2>
+          <table>
+            <tr><th>Step</th><th>Count</th><th>Percentage</th></tr>
+            ${funnelData.map(f => `
+              <tr>
+                <td>${f.name}</td>
+                <td>${f.count.toLocaleString()}</td>
+                <td>${f.percentage.toFixed(2)}%</td>
+              </tr>
+            `).join('')}
+          </table>
+          
+          <h2>Recent Events</h2>
+          <table>
+            <tr><th>Event</th><th>Timestamp</th><th>Page</th></tr>
+            ${recentEvents.slice(0, 10).map(e => `
+              <tr>
+                <td>${e.name}</td>
+                <td>${e.properties?.timestamp ? new Date(e.properties.timestamp).toLocaleString() : '-'}</td>
+                <td>${e.properties?.page_path || '-'}</td>
+              </tr>
+            `).join('')}
+          </table>
+          
+          <div class="footer">
+            XPEX Neural - API Marketplace Premium<br>
+            Report generated automatically
+          </div>
+        </body>
+        </html>
+      `;
+      
+      // Open print dialog
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        printWindow.print();
+      }
+      
+      toast({
+        title: "PDF pronto",
+        description: "Use Ctrl+P ou Cmd+P para salvar como PDF.",
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Erro na exportação",
+        description: "Não foi possível gerar o PDF.",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -152,7 +325,7 @@ export const AnalyticsDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-primary" />
@@ -162,10 +335,20 @@ export const AnalyticsDashboard = () => {
             Métricas de conversão e uso em tempo real
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchAnalytics}>
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportToCSV} disabled={exporting}>
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportToPDF} disabled={exporting}>
+            <FileText className="w-4 h-4 mr-2" />
+            PDF
+          </Button>
+          <Button variant="outline" size="sm" onClick={fetchAnalytics}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Key Metrics Grid */}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Copy, Check, Code2, Terminal, Loader2, History, RotateCcw, Trash2, Key } from "lucide-react";
+import { Play, Copy, Check, Code2, Terminal, Loader2, History, RotateCcw, Trash2, Key, Clock, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,6 +29,13 @@ interface RequestHistoryItem {
   response: string;
   status: number;
   timestamp: Date;
+  responseTimeMs: number;
+}
+
+interface RateLimitInfo {
+  remaining: number;
+  limit: number;
+  resetAt: Date | null;
 }
 
 const endpoints: APIEndpoint[] = [
@@ -117,6 +124,8 @@ export function APIPlayground() {
   const [copied, setCopied] = useState<string | null>(null);
   const [history, setHistory] = useState<RequestHistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [rateLimit, setRateLimit] = useState<RateLimitInfo | null>(null);
+  const [lastResponseTime, setLastResponseTime] = useState<number | null>(null);
   const { toast } = useToast();
   const { keys, loading: keysLoading } = useAPIKeys();
 
@@ -162,7 +171,7 @@ export function APIPlayground() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const addToHistory = (endpointId: string, requestParams: Record<string, string>, responseText: string, status: number) => {
+  const addToHistory = (endpointId: string, requestParams: Record<string, string>, responseText: string, status: number, responseTimeMs: number) => {
     const newItem: RequestHistoryItem = {
       id: crypto.randomUUID(),
       endpoint: endpointId,
@@ -170,6 +179,7 @@ export function APIPlayground() {
       response: responseText,
       status,
       timestamp: new Date(),
+      responseTimeMs,
     };
 
     setHistory(prev => {
@@ -210,6 +220,8 @@ export function APIPlayground() {
     setIsLoading(true);
     setResponse("");
 
+    const startTime = performance.now();
+
     try {
       const baseUrl = `https://bgfjhietjsrlzscxdutt.supabase.co/functions/v1${endpoint.path}`;
       const body = endpoint.exampleBody ? { ...endpoint.exampleBody, ...params } : params;
@@ -223,12 +235,29 @@ export function APIPlayground() {
         body: JSON.stringify(body),
       });
 
+      const endTime = performance.now();
+      const responseTimeMs = Math.round(endTime - startTime);
+      setLastResponseTime(responseTimeMs);
+
+      // Parse rate limit headers
+      const rateLimitRemaining = res.headers.get('x-ratelimit-remaining');
+      const rateLimitLimit = res.headers.get('x-ratelimit-limit');
+      const rateLimitReset = res.headers.get('x-ratelimit-reset');
+
+      if (rateLimitRemaining !== null || rateLimitLimit !== null) {
+        setRateLimit({
+          remaining: rateLimitRemaining ? parseInt(rateLimitRemaining, 10) : 100,
+          limit: rateLimitLimit ? parseInt(rateLimitLimit, 10) : 100,
+          resetAt: rateLimitReset ? new Date(parseInt(rateLimitReset, 10)) : null,
+        });
+      }
+
       const data = await res.json();
       const responseText = JSON.stringify(data, null, 2);
       setResponse(responseText);
 
-      // Add to history
-      addToHistory(endpoint.id, params, responseText, res.status);
+      // Add to history with response time
+      addToHistory(endpoint.id, params, responseText, res.status, responseTimeMs);
 
       // Track analytics
       analytics.track('api_playground_used', {
@@ -238,14 +267,18 @@ export function APIPlayground() {
 
       toast({
         title: res.ok ? "Sucesso!" : "Erro na requisição",
-        description: res.ok ? "Requisição executada com sucesso." : `Status: ${res.status}`,
+        description: res.ok ? `Executado em ${responseTimeMs}ms` : `Status: ${res.status}`,
         variant: res.ok ? "default" : "destructive",
       });
     } catch (error) {
+      const endTime = performance.now();
+      const responseTimeMs = Math.round(endTime - startTime);
+      setLastResponseTime(responseTimeMs);
+
       const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
       const errorResponse = JSON.stringify({ error: errorMessage }, null, 2);
       setResponse(errorResponse);
-      addToHistory(endpoint.id, params, errorResponse, 500);
+      addToHistory(endpoint.id, params, errorResponse, 500, responseTimeMs);
       toast({
         title: "Erro",
         description: errorMessage,
@@ -320,8 +353,12 @@ export function APIPlayground() {
                             Repetir
                           </Button>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {item.timestamp.toLocaleString('pt-BR')}
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span>{item.timestamp.toLocaleString('pt-BR')}</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {item.responseTimeMs}ms
+                          </span>
                         </div>
                         {Object.keys(item.params).length > 0 && (
                           <div className="text-xs font-mono mt-1 text-muted-foreground">
@@ -424,6 +461,36 @@ export function APIPlayground() {
                 ))}
               </div>
             )}
+
+            {/* Rate Limit & Response Time Display */}
+            <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 border border-border/50">
+              <div className="flex items-center gap-2">
+                <Gauge className="h-4 w-4 text-primary" />
+                <span className="text-xs text-muted-foreground">Rate Limit:</span>
+                {rateLimit ? (
+                  <div className="flex items-center gap-1">
+                    <span className={`text-sm font-mono font-medium ${rateLimit.remaining < 10 ? 'text-destructive' : rateLimit.remaining < 50 ? 'text-yellow-500' : 'text-green-500'}`}>
+                      {rateLimit.remaining}
+                    </span>
+                    <span className="text-xs text-muted-foreground">/ {rateLimit.limit}</span>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">--</span>
+                )}
+              </div>
+              <div className="h-4 w-px bg-border" />
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                <span className="text-xs text-muted-foreground">Último tempo:</span>
+                {lastResponseTime !== null ? (
+                  <span className={`text-sm font-mono font-medium ${lastResponseTime < 200 ? 'text-green-500' : lastResponseTime < 500 ? 'text-yellow-500' : 'text-destructive'}`}>
+                    {lastResponseTime}ms
+                  </span>
+                ) : (
+                  <span className="text-xs text-muted-foreground">--</span>
+                )}
+              </div>
+            </div>
 
             <Button onClick={handleExecute} disabled={isLoading} className="w-full" variant="neon">
               {isLoading ? (

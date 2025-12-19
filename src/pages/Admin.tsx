@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Server,
   BarChart3,
+  ShieldAlert,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdminRole } from "@/hooks/useAdminRole";
 import { Navigate } from "react-router-dom";
+import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 
 const statsData = [
   { label: "Total Users", value: "2,847", change: "+12%", icon: Users },
@@ -41,18 +44,40 @@ const systemHealth = [
 
 const Admin = () => {
   const { user, loading } = useAuth();
+  const { isAdmin, loading: adminLoading } = useAdminRole();
   const [activeTab, setActiveTab] = useState("overview");
 
-  if (loading) {
+  if (loading || adminLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-primary">Loading...</div>
+        <div className="animate-pulse text-primary">Verificando acesso...</div>
       </div>
     );
   }
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Server-side role check - redirect non-admin users
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="pt-24 pb-16 container mx-auto px-4">
+          <Card className="p-8 bg-card/50 backdrop-blur border-border/50 text-center">
+            <ShieldAlert className="w-16 h-16 text-destructive mx-auto mb-4" />
+            <h1 className="text-2xl font-bold mb-2">Acesso Negado</h1>
+            <p className="text-muted-foreground mb-4">
+              Você não tem permissão para acessar o painel de administração.
+            </p>
+            <Button onClick={() => window.location.href = '/dashboard'}>
+              Ir para Dashboard
+            </Button>
+          </Card>
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -189,9 +214,7 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="analytics">
-            <Card className="p-6 bg-card/50 backdrop-blur border-border/50">
-              <p className="text-muted-foreground">Advanced analytics coming soon...</p>
-            </Card>
+            <AnalyticsDashboard />
           </TabsContent>
 
           <TabsContent value="system">

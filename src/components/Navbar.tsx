@@ -3,6 +3,7 @@ import { Zap, Menu, X, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -95,6 +96,7 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
+            <ThemeToggle />
             {user ? (
               <Link to="/dashboard">
                 <Button variant="neon" size="sm">Dashboard</Button>
@@ -141,7 +143,8 @@ const Navbar = () => {
                   )
                 )}
               </div>
-              <div className="flex gap-4 pt-4">
+              <div className="flex items-center gap-4 pt-4">
+                <ThemeToggle />
                 {user ? (
                   <Link to="/dashboard" className="flex-1">
                     <Button variant="neon" size="sm" className="w-full">Dashboard</Button>

@@ -61,14 +61,14 @@ function generateCodeExample(endpoint: APIEndpoint, params: Record<string, strin
 
   const curl = `curl -X ${endpoint.method} \\
   "${baseUrl}" \\
-  -H "Authorization: Bearer ${apiKey || 'YOUR_API_KEY'}" \\
+  -H "x-api-key: ${apiKey || 'YOUR_API_KEY'}" \\
   -H "Content-Type: application/json" \\
   -d '${JSON.stringify(body)}'`;
 
   const javascript = `const response = await fetch("${baseUrl}", {
   method: "${endpoint.method}",
   headers: {
-    "Authorization": "Bearer ${apiKey || 'YOUR_API_KEY'}",
+    "x-api-key": "${apiKey || 'YOUR_API_KEY'}",
     "Content-Type": "application/json",
   },
   body: JSON.stringify(${bodyStr}),
@@ -82,7 +82,7 @@ console.log(data);`;
 response = requests.${endpoint.method.toLowerCase()}(
     "${baseUrl}",
     headers={
-        "Authorization": "Bearer ${apiKey || 'YOUR_API_KEY'}",
+        "x-api-key": "${apiKey || 'YOUR_API_KEY'}",
         "Content-Type": "application/json",
     },
     json=${bodyStr.replace(/"/g, "'").replace(/null/g, "None").replace(/true/g, "True").replace(/false/g, "False")},
@@ -131,7 +131,7 @@ export function APIPlayground() {
       const res = await fetch(baseUrl, {
         method: endpoint.method,
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          "x-api-key": apiKey,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),

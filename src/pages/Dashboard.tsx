@@ -17,6 +17,8 @@ import { ReferralEvolutionChart } from "@/components/admin/ReferralEvolutionChar
 import { WebhooksManager } from "@/components/admin/WebhooksManager";
 import { AchievementsPanel } from "@/components/admin/AchievementsPanel";
 import { PushNotificationSettings } from "@/components/admin/PushNotificationSettings";
+import { ExportReports } from "@/components/admin/ExportReports";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useAPIKeys } from "@/hooks/useAPIKeys";
 import { useUsageLogs } from "@/hooks/useUsageLogs";
@@ -68,6 +70,7 @@ const Dashboard = () => {
               {user?.email}
             </span>
             <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+            <ThemeToggle />
             <Button 
               variant="ghost" 
               size="sm" 
@@ -157,10 +160,11 @@ const Dashboard = () => {
           <WebhooksManager />
         </div>
 
-        {/* Achievements and Notifications */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Achievements, Notifications and Export */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <AchievementsPanel />
           <PushNotificationSettings />
+          <ExportReports />
         </div>
 
         {/* API Keys Table */}

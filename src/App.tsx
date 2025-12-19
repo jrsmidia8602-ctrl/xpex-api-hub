@@ -23,6 +23,9 @@ import SLA from "./pages/legal/SLA";
 import Contact from "./pages/Contact";
 import Status from "./pages/Status";
 import GoldEmailValidator from "./pages/GoldEmailValidator";
+import BridgeScan from "./pages/products/BridgeScan";
+import IPInsight from "./pages/products/IPInsight";
+import LinkMagic from "./pages/products/LinkMagic";
 import Credits from "./pages/Credits";
 import NotFound from "./pages/NotFound";
 import CookieConsent from "./components/CookieConsent";
@@ -52,6 +55,10 @@ const App = () => (
               <Route path="/contact" element={<Contact />} />
               <Route path="/status" element={<Status />} />
               <Route path="/products/gold-email-validator" element={<GoldEmailValidator />} />
+              <Route path="/products/bridgescan" element={<BridgeScan />} />
+              <Route path="/products/ip-insight" element={<IPInsight />} />
+              <Route path="/products/link-magic" element={<LinkMagic />} />
+              <Route path="/gold-email-validator" element={<GoldEmailValidator />} />
               <Route path="/credits" element={<Credits />} />
               <Route
                 path="/dashboard" 

@@ -10,6 +10,63 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// Rate limiter implementation
+interface RateLimitEntry {
+  count: number;
+  resetAt: number;
+}
+
+const rateLimitStore = new Map<string, RateLimitEntry>();
+
+const RATE_LIMITS = {
+  perApiKey: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 requests per minute per API key
+  perIp: { maxRequests: 30, windowMs: 60 * 1000 }, // 30 requests per minute per IP
+};
+
+function checkRateLimit(identifier: string, config: { maxRequests: number; windowMs: number }): { allowed: boolean; remaining: number; resetAt: number } {
+  const now = Date.now();
+  const entry = rateLimitStore.get(identifier);
+
+  if (entry && now >= entry.resetAt) {
+    rateLimitStore.delete(identifier);
+  }
+
+  const currentEntry = rateLimitStore.get(identifier);
+
+  if (!currentEntry) {
+    const resetAt = now + config.windowMs;
+    rateLimitStore.set(identifier, { count: 1, resetAt });
+    return { allowed: true, remaining: config.maxRequests - 1, resetAt };
+  }
+
+  if (currentEntry.count >= config.maxRequests) {
+    return { allowed: false, remaining: 0, resetAt: currentEntry.resetAt };
+  }
+
+  currentEntry.count++;
+  return { allowed: true, remaining: config.maxRequests - currentEntry.count, resetAt: currentEntry.resetAt };
+}
+
+function getRateLimitHeaders(limit: number, remaining: number, resetAt: number) {
+  return {
+    'X-RateLimit-Limit': limit.toString(),
+    'X-RateLimit-Remaining': remaining.toString(),
+    'X-RateLimit-Reset': Math.ceil(resetAt / 1000).toString(),
+  };
+}
+
+function getClientIp(req: Request): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  const realIp = req.headers.get('x-real-ip');
+  if (realIp) {
+    return realIp;
+  }
+  return 'unknown';
+}
+
 // Disposable email domains list (expanded)
 const disposableDomains = [
   'tempmail.com', 'throwaway.com', 'mailinator.com', 'guerrillamail.com',
@@ -104,7 +161,28 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const clientIp = getClientIp(req);
+
   try {
+    // Check IP-based rate limit first
+    const ipRateLimit = checkRateLimit(`ip:${clientIp}`, RATE_LIMITS.perIp);
+    if (!ipRateLimit.allowed) {
+      console.log('[VALIDATE-EMAIL] IP rate limit exceeded:', clientIp);
+      return new Response(JSON.stringify({
+        ok: false,
+        error: 'Too many requests from this IP. Please try again later.',
+        code: 'RATE_LIMIT_EXCEEDED',
+        retry_after_seconds: Math.ceil((ipRateLimit.resetAt - Date.now()) / 1000)
+      }), {
+        status: 429,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+          ...getRateLimitHeaders(RATE_LIMITS.perIp.maxRequests, 0, ipRateLimit.resetAt)
+        }
+      });
+    }
+
     // Get API key from header
     const apiKey = req.headers.get('x-api-key');
     
@@ -116,6 +194,25 @@ serve(async (req) => {
       }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Check API key rate limit
+    const keyRateLimit = checkRateLimit(`key:${apiKey}`, RATE_LIMITS.perApiKey);
+    if (!keyRateLimit.allowed) {
+      console.log('[VALIDATE-EMAIL] API key rate limit exceeded');
+      return new Response(JSON.stringify({
+        ok: false,
+        error: 'Rate limit exceeded for this API key. Please try again later.',
+        code: 'RATE_LIMIT_EXCEEDED',
+        retry_after_seconds: Math.ceil((keyRateLimit.resetAt - Date.now()) / 1000)
+      }), {
+        status: 429,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+          ...getRateLimitHeaders(RATE_LIMITS.perApiKey.maxRequests, 0, keyRateLimit.resetAt)
+        }
       });
     }
 
@@ -183,14 +280,22 @@ serve(async (req) => {
         risk_level: score >= 80 ? 'low' : score >= 50 ? 'medium' : 'high'
       },
       credits_used: 1,
-      response_time_ms: Date.now() - startTime
+      response_time_ms: Date.now() - startTime,
+      rate_limit: {
+        remaining: keyRateLimit.remaining,
+        reset_at: new Date(keyRateLimit.resetAt).toISOString()
+      }
     };
 
     // Log successful usage
     await logUsage(keyValidation.userId!, keyValidation.keyId!, '/validate-email', 200, result.response_time_ms);
 
     return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        ...getRateLimitHeaders(RATE_LIMITS.perApiKey.maxRequests, keyRateLimit.remaining, keyRateLimit.resetAt)
+      }
     });
 
   } catch (error) {

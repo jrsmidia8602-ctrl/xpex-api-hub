@@ -20,6 +20,7 @@ import { PushNotificationSettings } from "@/components/admin/PushNotificationSet
 import { ExportReports } from "@/components/admin/ExportReports";
 import { APIPlayground } from "@/components/admin/APIPlayground";
 import { BillingCenter } from "@/components/admin/BillingCenter";
+import { AuditLogsPanel } from "@/components/admin/AuditLogsPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { useAuth } from "@/hooks/useAuth";
@@ -179,6 +180,11 @@ const Dashboard = () => {
         {/* Billing Center */}
         <div className="mb-8">
           <BillingCenter />
+        </div>
+
+        {/* Audit Logs */}
+        <div className="mb-8">
+          <AuditLogsPanel />
         </div>
 
         {/* API Keys Table */}

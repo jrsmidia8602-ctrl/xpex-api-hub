@@ -3,6 +3,7 @@ import { Trophy, Medal, Award, Crown, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { ReferralBadge, getReferralTier, getTierConfig } from './ReferralBadge';
 
 interface LeaderboardEntry {
   profile_id: string;
@@ -166,11 +167,12 @@ export const ReferralLeaderboard = () => {
                     {getRankIcon(index)}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-foreground">
                         {entry.display_name}
                       </span>
                       {getRankBadge(index)}
+                      <ReferralBadge completedReferrals={entry.completed_referrals} showLabel={false} size="sm" />
                     </div>
                     <span className="text-xs text-muted-foreground font-mono">
                       {entry.referral_code}

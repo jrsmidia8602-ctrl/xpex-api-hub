@@ -1,8 +1,7 @@
 import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
-import APIsSection from "@/components/APIsSection";
-import EmailValidator from "@/components/EmailValidator";
-import Testimonials from "@/components/Testimonials";
+import ProductPortfolio from "@/components/ProductPortfolio";
+import SocialProof from "@/components/SocialProof";
 import PricingSection from "@/components/PricingSection";
 import Footer from "@/components/Footer";
 
@@ -11,9 +10,8 @@ const Index = () => {
     <main className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <Navbar />
       <HeroSection />
-      <APIsSection />
-      <EmailValidator />
-      <Testimonials />
+      <ProductPortfolio />
+      <SocialProof />
       <PricingSection />
       <Footer />
     </main>

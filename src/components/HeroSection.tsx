@@ -32,15 +32,15 @@ const HeroSection = () => {
 
           {/* Headline */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight mb-6 animate-fade-in" style={{ animationDelay: "0.1s" }}>
-            <span className="text-foreground">Construa APIs Premium</span>
+            <span className="text-foreground">Construa monetização</span>
             <br />
-            <span className="text-gradient">com XPEX Neural</span>
+            <span className="text-gradient">inteligente</span>
           </h1>
 
           {/* Subheadline */}
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in" style={{ animationDelay: "0.2s" }}>
-            Agentes autônomos criam valor, você monitora e monetiza. 
-            APIs que empresas, IAs e agentes descobrem, usam e pagam automaticamente.
+            APIs e agentes autônomos trabalham para você.
+            Descubra, integre e monetize com precisão.
           </p>
 
           {/* CTAs */}
@@ -64,7 +64,7 @@ const HeroSection = () => {
               asChild
               onClick={() => analytics.trackDemoStarted('hero_demo')}
             >
-              <a href="/gold-email-validator">
+              <a href="/products/gold-email-validator">
                 <Play className="w-5 h-5" />
                 Assista a Demo
               </a>

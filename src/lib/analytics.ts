@@ -1,5 +1,5 @@
 // Analytics tracking utility for conversion events
-// Integrated with Google Analytics 4
+// Integrated with Google Analytics 4 and Mixpanel
 
 type EventName = 
   | 'cta_click'
@@ -12,7 +12,8 @@ type EventName =
   | 'demo_started'
   | 'signup_started'
   | 'login_completed'
-  | 'page_view';
+  | 'page_view'
+  | 'live_demo_interaction';
 
 interface EventProperties {
   [key: string]: string | number | boolean | undefined | Record<string, any>[] | Record<string, any>;
@@ -22,6 +23,15 @@ declare global {
   interface Window {
     gtag?: (...args: any[]) => void;
     dataLayer?: any[];
+    mixpanel?: {
+      init: (token: string, config?: object) => void;
+      track: (event: string, properties?: object) => void;
+      track_pageview: (properties?: object) => void;
+      identify: (id: string) => void;
+      people: {
+        set: (properties: object) => void;
+      };
+    };
   }
 }
 
@@ -49,6 +59,9 @@ class Analytics {
     // Send to Google Analytics 4
     this.sendToGA4(eventName, properties);
 
+    // Send to Mixpanel
+    this.sendToMixpanel(eventName, properties);
+
     // Store in localStorage for debugging
     this.storeLocally(event);
   }
@@ -70,6 +83,33 @@ class Analytics {
         event_category: 'conversion',
         event_label: eventName,
         ...properties,
+      });
+    }
+  }
+
+  private sendToMixpanel(eventName: string, properties?: EventProperties) {
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      // Map to Mixpanel-friendly event names
+      const mixpanelEventMap: Record<string, string> = {
+        'checkout_initiated': 'Checkout Started',
+        'plan_selected': 'Plan Selected',
+        'credits_purchased': 'Credits Purchased',
+        'signup_started': 'Signup Started',
+        'login_completed': 'Login Completed',
+        'cta_click': 'CTA Clicked',
+        'api_key_generated': 'API Key Generated',
+        'api_key_deleted': 'API Key Deleted',
+        'email_validated': 'Email Validated',
+        'demo_started': 'Demo Started',
+        'page_view': 'Page Viewed',
+        'live_demo_interaction': 'Live Demo Interaction',
+      };
+
+      const mixpanelEventName = mixpanelEventMap[eventName] || eventName;
+      
+      window.mixpanel.track(mixpanelEventName, {
+        ...properties,
+        timestamp: new Date().toISOString(),
       });
     }
   }

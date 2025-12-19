@@ -18,7 +18,10 @@ import { WebhooksManager } from "@/components/admin/WebhooksManager";
 import { AchievementsPanel } from "@/components/admin/AchievementsPanel";
 import { PushNotificationSettings } from "@/components/admin/PushNotificationSettings";
 import { ExportReports } from "@/components/admin/ExportReports";
+import { APIPlayground } from "@/components/admin/APIPlayground";
+import { BillingCenter } from "@/components/admin/BillingCenter";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { useAuth } from "@/hooks/useAuth";
 import { useAPIKeys } from "@/hooks/useAPIKeys";
 import { useUsageLogs } from "@/hooks/useUsageLogs";
@@ -65,11 +68,12 @@ const Dashboard = () => {
               Admin Dashboard
             </h1>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground font-mono">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground font-mono hidden sm:block">
               {user?.email}
             </span>
             <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+            <NotificationCenter />
             <ThemeToggle />
             <Button 
               variant="ghost" 
@@ -165,6 +169,16 @@ const Dashboard = () => {
           <AchievementsPanel />
           <PushNotificationSettings />
           <ExportReports />
+        </div>
+
+        {/* API Playground */}
+        <div className="mb-8">
+          <APIPlayground />
+        </div>
+
+        {/* Billing Center */}
+        <div className="mb-8">
+          <BillingCenter />
         </div>
 
         {/* API Keys Table */}

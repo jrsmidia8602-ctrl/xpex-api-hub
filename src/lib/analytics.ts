@@ -13,7 +13,9 @@ type EventName =
   | 'signup_started'
   | 'login_completed'
   | 'page_view'
-  | 'live_demo_interaction';
+  | 'live_demo_interaction'
+  | 'api_playground_used'
+  | 'request_replayed';
 
 interface EventProperties {
   [key: string]: string | number | boolean | undefined | Record<string, any>[] | Record<string, any>;
@@ -108,6 +110,8 @@ class Analytics {
         'demo_started': 'Demo Started',
         'page_view': 'Page Viewed',
         'live_demo_interaction': 'Live Demo Interaction',
+        'api_playground_used': 'API Playground Used',
+        'request_replayed': 'Request Replayed',
       };
 
       const mixpanelEventName = mixpanelEventMap[eventName] || eventName;

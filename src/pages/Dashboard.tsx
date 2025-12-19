@@ -11,6 +11,8 @@ import { RateLimitingCard } from "@/components/admin/RateLimitingCard";
 import { LiveMetricsPanel } from "@/components/admin/LiveMetricsPanel";
 import { LatencyGraph } from "@/components/admin/LatencyGraph";
 import { EndpointBreakdown } from "@/components/admin/EndpointBreakdown";
+import { ReferralCard } from "@/components/admin/ReferralCard";
+import { WebhooksManager } from "@/components/admin/WebhooksManager";
 import { useAuth } from "@/hooks/useAuth";
 import { useAPIKeys } from "@/hooks/useAPIKeys";
 import { useUsageLogs } from "@/hooks/useUsageLogs";
@@ -137,6 +139,12 @@ const Dashboard = () => {
             <AIInsights />
           </div>
           <RecentActivity />
+        </div>
+
+        {/* Referral and Webhooks */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <ReferralCard />
+          <WebhooksManager />
         </div>
 
         {/* API Keys Table */}

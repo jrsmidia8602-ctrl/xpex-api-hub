@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Play, Copy, Check, Code2, Terminal, Loader2, History, RotateCcw, Trash2, Key, Clock, Gauge } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Play, Copy, Check, Code2, Terminal, Loader2, History, RotateCcw, Trash2, Key, Clock, Gauge, Download, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -75,6 +75,81 @@ const endpoints: APIEndpoint[] = [
 const HISTORY_KEY = "xpex_api_playground_history";
 const MAX_HISTORY_ITEMS = 50;
 
+interface ResponseTimeStats {
+  average: number;
+  min: number;
+  max: number;
+  trend: 'up' | 'down' | 'stable';
+  trendPercent: number;
+}
+
+function calculateResponseTimeStats(history: RequestHistoryItem[]): ResponseTimeStats | null {
+  if (history.length === 0) return null;
+  
+  const times = history.map(h => h.responseTimeMs);
+  const average = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
+  const min = Math.min(...times);
+  const max = Math.max(...times);
+  
+  // Calculate trend: compare first half avg vs second half avg
+  let trend: 'up' | 'down' | 'stable' = 'stable';
+  let trendPercent = 0;
+  
+  if (history.length >= 4) {
+    const mid = Math.floor(history.length / 2);
+    const recentTimes = times.slice(0, mid);
+    const olderTimes = times.slice(mid);
+    
+    const recentAvg = recentTimes.reduce((a, b) => a + b, 0) / recentTimes.length;
+    const olderAvg = olderTimes.reduce((a, b) => a + b, 0) / olderTimes.length;
+    
+    trendPercent = Math.round(((recentAvg - olderAvg) / olderAvg) * 100);
+    
+    if (trendPercent > 10) trend = 'up';
+    else if (trendPercent < -10) trend = 'down';
+  }
+  
+  return { average, min, max, trend, trendPercent: Math.abs(trendPercent) };
+}
+
+function exportHistory(history: RequestHistoryItem[], format: 'json' | 'csv'): void {
+  let content: string;
+  let mimeType: string;
+  let extension: string;
+  
+  if (format === 'json') {
+    content = JSON.stringify(history.map(item => ({
+      ...item,
+      timestamp: item.timestamp.toISOString(),
+    })), null, 2);
+    mimeType = 'application/json';
+    extension = 'json';
+  } else {
+    const headers = ['id', 'endpoint', 'status', 'responseTimeMs', 'timestamp', 'params'];
+    const rows = history.map(item => [
+      item.id,
+      item.endpoint,
+      item.status.toString(),
+      item.responseTimeMs.toString(),
+      item.timestamp.toISOString(),
+      JSON.stringify(item.params),
+    ]);
+    content = [headers.join(','), ...rows.map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(','))].join('\n');
+    mimeType = 'text/csv';
+    extension = 'csv';
+  }
+  
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `api-history-${new Date().toISOString().split('T')[0]}.${extension}`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function generateCodeExample(endpoint: APIEndpoint, params: Record<string, string>, apiKey: string): { curl: string; javascript: string; python: string } {
   const baseUrl = `https://bgfjhietjsrlzscxdutt.supabase.co/functions/v1${endpoint.path}`;
   const body = endpoint.exampleBody ? { ...endpoint.exampleBody, ...params } : params;
@@ -128,6 +203,9 @@ export function APIPlayground() {
   const [lastResponseTime, setLastResponseTime] = useState<number | null>(null);
   const { toast } = useToast();
   const { keys, loading: keysLoading } = useAPIKeys();
+
+  // Calculate response time stats
+  const responseTimeStats = useMemo(() => calculateResponseTimeStats(history), [history]);
 
   // Load history from localStorage
   useEffect(() => {
@@ -316,13 +394,79 @@ export function APIPlayground() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-sm">Histórico de Requisições</h3>
-              {history.length > 0 && (
-                <Button variant="ghost" size="sm" onClick={clearHistory} className="text-destructive">
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Limpar
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {history.length > 0 && (
+                  <>
+                    <Select onValueChange={(format) => exportHistory(history, format as 'json' | 'csv')}>
+                      <SelectTrigger className="w-[120px] h-8">
+                        <Download className="h-3 w-3 mr-1" />
+                        <SelectValue placeholder="Exportar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="json">JSON</SelectItem>
+                        <SelectItem value="csv">CSV</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="ghost" size="sm" onClick={clearHistory} className="text-destructive h-8">
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Limpar
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
+
+            {/* Response Time Statistics */}
+            {responseTimeStats && history.length > 0 && (
+              <div className="p-4 rounded-lg bg-muted/30 border border-border/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">Estatísticas de Tempo de Resposta</span>
+                  <Badge variant="outline" className="text-xs">
+                    Últimas {history.length} requisições
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-xs text-muted-foreground mb-1">Média</div>
+                    <div className="text-lg font-mono font-semibold text-primary">
+                      {responseTimeStats.average}ms
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-muted-foreground mb-1">Mínimo</div>
+                    <div className="text-lg font-mono font-semibold text-green-500">
+                      {responseTimeStats.min}ms
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-muted-foreground mb-1">Máximo</div>
+                    <div className="text-lg font-mono font-semibold text-destructive">
+                      {responseTimeStats.max}ms
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-muted-foreground mb-1">Tendência</div>
+                    <div className="flex items-center justify-center gap-1">
+                      {responseTimeStats.trend === 'up' ? (
+                        <TrendingUp className="h-4 w-4 text-destructive" />
+                      ) : responseTimeStats.trend === 'down' ? (
+                        <TrendingDown className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Minus className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <span className={`text-sm font-medium ${
+                        responseTimeStats.trend === 'up' ? 'text-destructive' : 
+                        responseTimeStats.trend === 'down' ? 'text-green-500' : 
+                        'text-muted-foreground'
+                      }`}>
+                        {responseTimeStats.trend === 'stable' ? 'Estável' : `${responseTimeStats.trendPercent}%`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             <ScrollArea className="h-[400px]">
               {history.length === 0 ? (
                 <p className="text-muted-foreground text-sm text-center py-8">

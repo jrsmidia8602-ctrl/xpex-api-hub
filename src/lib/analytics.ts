@@ -1,34 +1,124 @@
-// Analytics tracking utility for conversion events
+// Analytics tracking utility - XPEX Enterprise Schema v1
 // Integrated with Google Analytics 4 and Mixpanel
 
+// Event categories for organization
+type EventCategory = 
+  | 'navigation' 
+  | 'engagement' 
+  | 'conversion' 
+  | 'onboarding' 
+  | 'auth' 
+  | 'product' 
+  | 'api' 
+  | 'billing';
+
+// Core event types from xpex_enterprise_v1 schema
 type EventName =
+  // Navigation
+  | 'page_view'
+  // Engagement
   | 'cta_click'
-  | 'checkout_initiated'
+  | 'scroll_depth'
+  | 'time_on_page'
+  | 'external_link_click'
+  | 'navigation_click'
+  | 'feature_interaction'
+  | 'search_performed'
+  // Conversion
+  | 'form_submitted'
+  | 'form_started'
+  // Onboarding
+  | 'signup_started'
+  | 'signup_completed'
+  // Auth
+  | 'login_completed'
+  // Product
+  | 'marketplace_view'
+  | 'product_page_view'
+  // API
+  | 'api_playground_used'
   | 'api_key_generated'
   | 'api_key_deleted'
   | 'email_validated'
-  | 'plan_selected'
-  | 'credits_purchased'
-  | 'demo_started'
-  | 'signup_started'
-  | 'login_completed'
-  | 'page_view'
-  | 'live_demo_interaction'
-  | 'api_playground_used'
   | 'request_replayed'
-  | 'form_submitted'
-  | 'form_started'
-  | 'navigation_click'
-  | 'external_link_click'
-  | 'scroll_depth'
-  | 'time_on_page'
-  | 'feature_interaction'
-  | 'error_occurred'
-  | 'search_performed';
+  | 'live_demo_interaction'
+  // Billing
+  | 'checkout_started'
+  | 'checkout_initiated' // Legacy alias
+  | 'purchase_completed'
+  | 'credits_purchased'
+  | 'plan_selected'
+  | 'demo_started'
+  | 'error_occurred';
+
+// Event parameter interfaces for type safety
+interface PageViewParams {
+  page_path: string;
+  page_title?: string;
+}
+
+interface CTAClickParams {
+  cta_id: string;
+  cta_label: string;
+  page_context: string;
+}
+
+interface FormSubmittedParams {
+  form_id: string;
+  form_type: string;
+  page_context: string;
+  success?: boolean;
+  error_message?: string;
+}
+
+interface SignupParams {
+  method: string;
+  page_context?: string;
+}
+
+interface MarketplaceViewParams {
+  section: string;
+}
+
+interface ProductPageViewParams {
+  product_name: string;
+}
+
+interface APIPlaygroundParams {
+  endpoint: string;
+  method: string;
+}
+
+interface APIKeyParams {
+  key_type?: string;
+  key_name?: string;
+}
+
+interface CheckoutParams {
+  plan_name: string;
+  billing_type: 'subscription' | 'one_time';
+  value?: number;
+  currency?: string;
+}
+
+interface PurchaseParams {
+  plan_name: string;
+  value: number;
+  currency: string;
+  transaction_id?: string;
+}
 
 interface EventProperties {
   [key: string]: string | number | boolean | undefined | Record<string, any>[] | Record<string, any>;
 }
+
+// Recommended conversions for GA4
+const RECOMMENDED_CONVERSIONS: EventName[] = [
+  'signup_completed',
+  'api_key_generated',
+  'checkout_started',
+  'purchase_completed'
+];
 
 declare global {
   interface Window {
@@ -86,17 +176,48 @@ class Analytics {
     if (typeof window !== 'undefined' && window.gtag) {
       // Map custom events to GA4 recommended events where applicable
       const ga4EventMap: Record<string, string> = {
+        'checkout_started': 'begin_checkout',
         'checkout_initiated': 'begin_checkout',
         'plan_selected': 'select_item',
+        'purchase_completed': 'purchase',
         'credits_purchased': 'purchase',
         'signup_started': 'sign_up',
+        'signup_completed': 'sign_up',
         'login_completed': 'login',
       };
 
       const ga4EventName = ga4EventMap[eventName] || eventName;
       
+      // Get category for the event
+      const categoryMap: Record<string, EventCategory> = {
+        'page_view': 'navigation',
+        'cta_click': 'engagement',
+        'scroll_depth': 'engagement',
+        'time_on_page': 'engagement',
+        'external_link_click': 'engagement',
+        'navigation_click': 'engagement',
+        'feature_interaction': 'engagement',
+        'search_performed': 'engagement',
+        'form_submitted': 'conversion',
+        'form_started': 'conversion',
+        'signup_started': 'onboarding',
+        'signup_completed': 'onboarding',
+        'login_completed': 'auth',
+        'marketplace_view': 'product',
+        'product_page_view': 'product',
+        'api_playground_used': 'api',
+        'api_key_generated': 'api',
+        'api_key_deleted': 'api',
+        'email_validated': 'api',
+        'checkout_started': 'billing',
+        'checkout_initiated': 'billing',
+        'purchase_completed': 'billing',
+        'credits_purchased': 'billing',
+        'plan_selected': 'billing',
+      };
+      
       window.gtag('event', ga4EventName, {
-        event_category: 'conversion',
+        event_category: categoryMap[eventName] || 'general',
         event_label: eventName,
         ...properties,
       });
@@ -105,31 +226,35 @@ class Analytics {
 
   private sendToMixpanel(eventName: string, properties?: EventProperties) {
     if (typeof window !== 'undefined' && window.mixpanel) {
-      // Map to Mixpanel-friendly event names
       const mixpanelEventMap: Record<string, string> = {
-        'checkout_initiated': 'Checkout Started',
-        'plan_selected': 'Plan Selected',
-        'credits_purchased': 'Credits Purchased',
-        'signup_started': 'Signup Started',
-        'login_completed': 'Login Completed',
+        'page_view': 'Page Viewed',
         'cta_click': 'CTA Clicked',
+        'scroll_depth': 'Scroll Depth Reached',
+        'time_on_page': 'Time on Page',
+        'external_link_click': 'External Link Clicked',
+        'navigation_click': 'Navigation Clicked',
+        'feature_interaction': 'Feature Interaction',
+        'search_performed': 'Search Performed',
+        'form_submitted': 'Form Submitted',
+        'form_started': 'Form Started',
+        'signup_started': 'Signup Started',
+        'signup_completed': 'Signup Completed',
+        'login_completed': 'Login Completed',
+        'marketplace_view': 'Marketplace Viewed',
+        'product_page_view': 'Product Page Viewed',
+        'api_playground_used': 'API Playground Used',
         'api_key_generated': 'API Key Generated',
         'api_key_deleted': 'API Key Deleted',
         'email_validated': 'Email Validated',
-        'demo_started': 'Demo Started',
-        'page_view': 'Page Viewed',
-        'live_demo_interaction': 'Live Demo Interaction',
-        'api_playground_used': 'API Playground Used',
         'request_replayed': 'Request Replayed',
-        'form_submitted': 'Form Submitted',
-        'form_started': 'Form Started',
-        'navigation_click': 'Navigation Clicked',
-        'external_link_click': 'External Link Clicked',
-        'scroll_depth': 'Scroll Depth Reached',
-        'time_on_page': 'Time on Page',
-        'feature_interaction': 'Feature Interaction',
+        'live_demo_interaction': 'Live Demo Interaction',
+        'checkout_started': 'Checkout Started',
+        'checkout_initiated': 'Checkout Started',
+        'purchase_completed': 'Purchase Completed',
+        'credits_purchased': 'Credits Purchased',
+        'plan_selected': 'Plan Selected',
+        'demo_started': 'Demo Started',
         'error_occurred': 'Error Occurred',
-        'search_performed': 'Search Performed',
       };
 
       const mixpanelEventName = mixpanelEventMap[eventName] || eventName;
@@ -146,7 +271,6 @@ class Analytics {
       try {
         const events = JSON.parse(localStorage.getItem('xpex_analytics') || '[]');
         events.push(event);
-        // Keep only last 100 events
         if (events.length > 100) events.shift();
         localStorage.setItem('xpex_analytics', JSON.stringify(events));
       } catch (e) {
@@ -155,7 +279,8 @@ class Analytics {
     }
   }
 
-  // Page view tracking
+  // ============== Navigation Events ==============
+  
   trackPageView(pagePath: string, pageTitle?: string) {
     if (typeof window !== 'undefined' && window.gtag) {
       window.gtag('event', 'page_view', {
@@ -166,200 +291,16 @@ class Analytics {
     this.track('page_view', { page_path: pagePath, page_title: pageTitle });
   }
 
-  // Convenience methods for common events
-  trackCTAClick(ctaName: string, location?: string) {
-    this.track('cta_click', { cta_name: ctaName, location });
-  }
-
-  trackCheckoutInitiated(tier: string, price?: number, priceId?: string) {
-    this.track('checkout_initiated', { 
-      tier, 
-      price,
-      currency: 'USD',
-      items: [{ item_name: tier, price }],
-      stripe_price_id: priceId
+  // ============== Engagement Events ==============
+  
+  trackCTAClick(ctaId: string, ctaLabel: string, pageContext?: string) {
+    this.track('cta_click', { 
+      cta_id: ctaId, 
+      cta_label: ctaLabel, 
+      page_context: pageContext || window.location.pathname 
     });
   }
 
-  trackAPIKeyGenerated(keyName: string) {
-    this.track('api_key_generated', { key_name: keyName });
-  }
-
-  trackAPIKeyDeleted(keyName: string) {
-    this.track('api_key_deleted', { key_name: keyName });
-  }
-
-  trackEmailValidated(isValid: boolean, riskScore?: number) {
-    this.track('email_validated', { is_valid: isValid, risk_score: riskScore });
-  }
-
-  trackPlanSelected(tier: string, price?: number) {
-    this.track('plan_selected', { 
-      tier,
-      value: price,
-      currency: 'USD'
-    });
-  }
-
-  trackCreditsPackage(packageName: string, credits: number, price?: number) {
-    this.track('credits_purchased', { 
-      package_name: packageName, 
-      credits,
-      value: price,
-      currency: 'USD'
-    });
-  }
-
-  trackDemoStarted(apiName: string) {
-    this.track('demo_started', { api_name: apiName });
-  }
-
-  trackSignupStarted(method?: string) {
-    // Start timing the signup funnel
-    if (typeof window !== 'undefined' && window.mixpanel) {
-      window.mixpanel.time_event('Signup Completed');
-    }
-    this.track('signup_started', { method });
-  }
-
-  trackLoginCompleted(method?: string) {
-    this.track('login_completed', { method });
-  }
-
-  // User identification for Mixpanel
-  identifyUser(userId: string, email?: string, properties?: Record<string, any>) {
-    if (typeof window !== 'undefined' && window.mixpanel) {
-      // Identify the user
-      window.mixpanel.identify(userId);
-      
-      // Set user profile properties
-      window.mixpanel.people.set({
-        $email: email,
-        $last_login: new Date().toISOString(),
-        ...properties,
-      });
-
-      // Set properties that should only be set once
-      window.mixpanel.people.set_once({
-        $created: new Date().toISOString(),
-        first_seen: new Date().toISOString(),
-      });
-
-      // Register super properties for all future events
-      window.mixpanel.register({
-        user_id: userId,
-        user_email: email,
-      });
-
-      console.log('[Analytics] User identified:', userId);
-    }
-
-    // Also set user ID in GA4
-    if (typeof window !== 'undefined' && window.gtag) {
-      window.gtag('set', 'user_id', userId);
-      window.gtag('set', 'user_properties', {
-        email: email,
-        ...properties,
-      });
-    }
-  }
-
-  // Reset user identity on logout
-  resetUser() {
-    if (typeof window !== 'undefined' && window.mixpanel) {
-      window.mixpanel.reset();
-      console.log('[Analytics] User identity reset');
-    }
-  }
-
-  // Funnel tracking methods
-  startCheckoutFunnel(tier: string, priceId?: string) {
-    if (typeof window !== 'undefined' && window.mixpanel) {
-      window.mixpanel.time_event('Checkout Completed');
-    }
-    this.trackCheckoutInitiated(tier, undefined, priceId);
-  }
-
-  completeCheckout(tier: string, price: number, transactionId?: string) {
-    if (typeof window !== 'undefined' && window.mixpanel) {
-      window.mixpanel.track('Checkout Completed', {
-        tier,
-        price,
-        currency: 'USD',
-        transaction_id: transactionId,
-      });
-      
-      // Increment purchase count
-      window.mixpanel.people.increment('total_purchases');
-      window.mixpanel.people.set({
-        last_purchase_date: new Date().toISOString(),
-        last_purchase_tier: tier,
-      });
-    }
-  }
-
-  completePurchase(packageName: string, credits: number, price: number, transactionId?: string) {
-    if (typeof window !== 'undefined' && window.mixpanel) {
-      window.mixpanel.track('Purchase Completed', {
-        package_name: packageName,
-        credits,
-        price,
-        currency: 'USD',
-        transaction_id: transactionId,
-      });
-      
-      // Update user profile
-      window.mixpanel.people.increment('total_credits_purchased', credits);
-      window.mixpanel.people.increment('total_spent', price);
-      window.mixpanel.people.set({
-        last_purchase_date: new Date().toISOString(),
-      });
-    }
-  }
-
-  completeSignup(userId: string, email: string, method?: string) {
-    if (typeof window !== 'undefined' && window.mixpanel) {
-      window.mixpanel.track('Signup Completed', {
-        method,
-        user_id: userId,
-      });
-    }
-    // Identify the new user
-    this.identifyUser(userId, email, { signup_method: method });
-  }
-
-  // Form tracking
-  trackFormStarted(formName: string, location?: string) {
-    this.track('form_started', { form_name: formName, location });
-  }
-
-  trackFormSubmitted(formName: string, success: boolean, location?: string, errorMessage?: string) {
-    this.track('form_submitted', { 
-      form_name: formName, 
-      success, 
-      location,
-      error_message: errorMessage 
-    });
-  }
-
-  // Navigation tracking
-  trackNavigationClick(linkName: string, destination: string, location?: string) {
-    this.track('navigation_click', { 
-      link_name: linkName, 
-      destination, 
-      location 
-    });
-  }
-
-  trackExternalLinkClick(url: string, linkText?: string, location?: string) {
-    this.track('external_link_click', { 
-      url, 
-      link_text: linkText, 
-      location 
-    });
-  }
-
-  // Engagement tracking
   trackScrollDepth(depth: number, pagePath: string) {
     this.track('scroll_depth', { 
       depth_percentage: depth, 
@@ -374,6 +315,22 @@ class Analytics {
     });
   }
 
+  trackExternalLinkClick(url: string, linkText?: string, location?: string) {
+    this.track('external_link_click', { 
+      url, 
+      link_text: linkText, 
+      location 
+    });
+  }
+
+  trackNavigationClick(linkName: string, destination: string, location?: string) {
+    this.track('navigation_click', { 
+      link_name: linkName, 
+      destination, 
+      location 
+    });
+  }
+
   trackFeatureInteraction(featureName: string, action: string, details?: Record<string, any>) {
     this.track('feature_interaction', { 
       feature_name: featureName, 
@@ -382,7 +339,150 @@ class Analytics {
     });
   }
 
-  // Error tracking
+  trackSearch(query: string, resultsCount?: number, location?: string) {
+    this.track('search_performed', { 
+      search_query: query, 
+      results_count: resultsCount, 
+      location 
+    });
+  }
+
+  // ============== Conversion Events ==============
+  
+  trackFormStarted(formId: string, formType: string, pageContext?: string) {
+    this.track('form_started', { 
+      form_id: formId, 
+      form_type: formType, 
+      page_context: pageContext || window.location.pathname 
+    });
+  }
+
+  trackFormSubmitted(formId: string, formType: string, pageContext?: string, success = true, errorMessage?: string) {
+    this.track('form_submitted', { 
+      form_id: formId, 
+      form_type: formType, 
+      page_context: pageContext || window.location.pathname,
+      success, 
+      error_message: errorMessage 
+    });
+  }
+
+  // ============== Onboarding Events ==============
+  
+  trackSignupStarted(method: string, pageContext?: string) {
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.time_event('Signup Completed');
+    }
+    this.track('signup_started', { 
+      method, 
+      page_context: pageContext || window.location.pathname 
+    });
+  }
+
+  trackSignupCompleted(userId: string, email: string, method: string) {
+    this.track('signup_completed', { method, user_id: userId });
+    this.identifyUser(userId, email, { signup_method: method });
+    
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.track('Signup Completed', { method, user_id: userId });
+    }
+  }
+
+  // ============== Auth Events ==============
+  
+  trackLoginCompleted(method: string) {
+    this.track('login_completed', { method });
+  }
+
+  // ============== Product Events ==============
+  
+  trackMarketplaceView(section: string) {
+    this.track('marketplace_view', { section });
+  }
+
+  trackProductPageView(productName: string) {
+    this.track('product_page_view', { product_name: productName });
+  }
+
+  // ============== API Events ==============
+  
+  trackAPIPlaygroundUsed(endpoint: string, method: string) {
+    this.track('api_playground_used', { endpoint, method });
+  }
+
+  trackAPIKeyGenerated(keyType: string, keyName?: string) {
+    this.track('api_key_generated', { key_type: keyType, key_name: keyName });
+  }
+
+  trackAPIKeyDeleted(keyName: string) {
+    this.track('api_key_deleted', { key_name: keyName });
+  }
+
+  trackEmailValidated(isValid: boolean, riskScore?: number) {
+    this.track('email_validated', { is_valid: isValid, risk_score: riskScore });
+  }
+
+  // ============== Billing Events ==============
+  
+  trackCheckoutStarted(planName: string, billingType: 'subscription' | 'one_time', value?: number, currency = 'USD') {
+    this.track('checkout_started', { 
+      plan_name: planName, 
+      billing_type: billingType,
+      value,
+      currency
+    });
+    
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.time_event('Purchase Completed');
+    }
+  }
+
+  // Legacy method alias
+  trackCheckoutInitiated(tier: string, price?: number, priceId?: string) {
+    this.trackCheckoutStarted(tier, 'subscription', price);
+  }
+
+  trackPurchaseCompleted(planName: string, value: number, currency = 'USD', transactionId?: string) {
+    this.track('purchase_completed', { 
+      plan_name: planName, 
+      value,
+      currency,
+      transaction_id: transactionId
+    });
+    
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.people.increment('total_purchases');
+      window.mixpanel.people.increment('total_spent', value);
+      window.mixpanel.people.set({
+        last_purchase_date: new Date().toISOString(),
+        last_purchase_plan: planName,
+      });
+    }
+  }
+
+  trackCreditsPackage(packageName: string, credits: number, price: number) {
+    this.track('credits_purchased', { 
+      package_name: packageName, 
+      credits,
+      value: price,
+      currency: 'USD'
+    });
+  }
+
+  trackPlanSelected(tier: string, price?: number) {
+    this.track('plan_selected', { 
+      tier,
+      value: price,
+      currency: 'USD'
+    });
+  }
+
+  trackDemoStarted(apiName: string) {
+    this.track('demo_started', { api_name: apiName });
+  }
+
+  // ============== Error Tracking ==============
+  
   trackError(errorType: string, errorMessage: string, location?: string) {
     this.track('error_occurred', { 
       error_type: errorType, 
@@ -391,13 +491,68 @@ class Analytics {
     });
   }
 
-  // Search tracking
-  trackSearch(query: string, resultsCount?: number, location?: string) {
-    this.track('search_performed', { 
-      search_query: query, 
-      results_count: resultsCount, 
-      location 
-    });
+  // ============== User Identification ==============
+  
+  identifyUser(userId: string, email?: string, properties?: Record<string, any>) {
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.identify(userId);
+      
+      window.mixpanel.people.set({
+        $email: email,
+        $last_login: new Date().toISOString(),
+        ...properties,
+      });
+
+      window.mixpanel.people.set_once({
+        $created: new Date().toISOString(),
+        first_seen: new Date().toISOString(),
+      });
+
+      window.mixpanel.register({
+        user_id: userId,
+        user_email: email,
+      });
+
+      console.log('[Analytics] User identified:', userId);
+    }
+
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('set', 'user_id', userId);
+      window.gtag('set', 'user_properties', {
+        email: email,
+        ...properties,
+      });
+    }
+  }
+
+  resetUser() {
+    if (typeof window !== 'undefined' && window.mixpanel) {
+      window.mixpanel.reset();
+      console.log('[Analytics] User identity reset');
+    }
+  }
+
+  // ============== Legacy Compatibility Methods ==============
+  
+  startCheckoutFunnel(tier: string, priceId?: string) {
+    this.trackCheckoutStarted(tier, 'subscription');
+  }
+
+  completeCheckout(tier: string, price: number, transactionId?: string) {
+    this.trackPurchaseCompleted(tier, price, 'USD', transactionId);
+  }
+
+  completePurchase(packageName: string, credits: number, price: number, transactionId?: string) {
+    this.trackCreditsPackage(packageName, credits, price);
+  }
+
+  completeSignup(userId: string, email: string, method?: string) {
+    this.trackSignupCompleted(userId, email, method || 'email');
+  }
+
+  // Get recommended conversions for GA4 setup
+  static getRecommendedConversions(): EventName[] {
+    return RECOMMENDED_CONVERSIONS;
   }
 }
 

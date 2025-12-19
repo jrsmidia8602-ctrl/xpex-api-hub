@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 import LiveValidator from "./LiveValidator";
 import { useValidationStats } from "@/hooks/useValidationStats";
-
+import { analytics } from "@/lib/analytics";
 const HeroSection = () => {
   const { stats } = useValidationStats();
 
@@ -45,13 +45,25 @@ const HeroSection = () => {
 
           {/* CTAs */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-            <Button variant="cyber" size="xl" className="group w-full sm:w-auto" asChild>
+            <Button 
+              variant="cyber" 
+              size="xl" 
+              className="group w-full sm:w-auto" 
+              asChild
+              onClick={() => analytics.trackCTAClick('comece_a_construir', 'hero')}
+            >
               <a href="/auth">
                 Comece a Construir
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </a>
             </Button>
-            <Button variant="glass" size="xl" className="w-full sm:w-auto" asChild>
+            <Button 
+              variant="glass" 
+              size="xl" 
+              className="w-full sm:w-auto" 
+              asChild
+              onClick={() => analytics.trackDemoStarted('hero_demo')}
+            >
               <a href="/gold-email-validator">
                 <Play className="w-5 h-5" />
                 Assista a Demo

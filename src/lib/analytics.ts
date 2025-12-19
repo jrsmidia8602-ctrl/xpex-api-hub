@@ -15,7 +15,16 @@ type EventName =
   | 'page_view'
   | 'live_demo_interaction'
   | 'api_playground_used'
-  | 'request_replayed';
+  | 'request_replayed'
+  | 'form_submitted'
+  | 'form_started'
+  | 'navigation_click'
+  | 'external_link_click'
+  | 'scroll_depth'
+  | 'time_on_page'
+  | 'feature_interaction'
+  | 'error_occurred'
+  | 'search_performed';
 
 interface EventProperties {
   [key: string]: string | number | boolean | undefined | Record<string, any>[] | Record<string, any>;
@@ -112,6 +121,15 @@ class Analytics {
         'live_demo_interaction': 'Live Demo Interaction',
         'api_playground_used': 'API Playground Used',
         'request_replayed': 'Request Replayed',
+        'form_submitted': 'Form Submitted',
+        'form_started': 'Form Started',
+        'navigation_click': 'Navigation Clicked',
+        'external_link_click': 'External Link Clicked',
+        'scroll_depth': 'Scroll Depth Reached',
+        'time_on_page': 'Time on Page',
+        'feature_interaction': 'Feature Interaction',
+        'error_occurred': 'Error Occurred',
+        'search_performed': 'Search Performed',
       };
 
       const mixpanelEventName = mixpanelEventMap[eventName] || eventName;
@@ -308,6 +326,78 @@ class Analytics {
     }
     // Identify the new user
     this.identifyUser(userId, email, { signup_method: method });
+  }
+
+  // Form tracking
+  trackFormStarted(formName: string, location?: string) {
+    this.track('form_started', { form_name: formName, location });
+  }
+
+  trackFormSubmitted(formName: string, success: boolean, location?: string, errorMessage?: string) {
+    this.track('form_submitted', { 
+      form_name: formName, 
+      success, 
+      location,
+      error_message: errorMessage 
+    });
+  }
+
+  // Navigation tracking
+  trackNavigationClick(linkName: string, destination: string, location?: string) {
+    this.track('navigation_click', { 
+      link_name: linkName, 
+      destination, 
+      location 
+    });
+  }
+
+  trackExternalLinkClick(url: string, linkText?: string, location?: string) {
+    this.track('external_link_click', { 
+      url, 
+      link_text: linkText, 
+      location 
+    });
+  }
+
+  // Engagement tracking
+  trackScrollDepth(depth: number, pagePath: string) {
+    this.track('scroll_depth', { 
+      depth_percentage: depth, 
+      page_path: pagePath 
+    });
+  }
+
+  trackTimeOnPage(seconds: number, pagePath: string) {
+    this.track('time_on_page', { 
+      time_seconds: seconds, 
+      page_path: pagePath 
+    });
+  }
+
+  trackFeatureInteraction(featureName: string, action: string, details?: Record<string, any>) {
+    this.track('feature_interaction', { 
+      feature_name: featureName, 
+      action,
+      ...details 
+    });
+  }
+
+  // Error tracking
+  trackError(errorType: string, errorMessage: string, location?: string) {
+    this.track('error_occurred', { 
+      error_type: errorType, 
+      error_message: errorMessage, 
+      location 
+    });
+  }
+
+  // Search tracking
+  trackSearch(query: string, resultsCount?: number, location?: string) {
+    this.track('search_performed', { 
+      search_query: query, 
+      results_count: resultsCount, 
+      location 
+    });
   }
 }
 

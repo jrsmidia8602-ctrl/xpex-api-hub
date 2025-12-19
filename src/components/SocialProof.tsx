@@ -1,5 +1,4 @@
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Star, Quote } from 'lucide-react';
 
 interface Partner {
@@ -16,11 +15,11 @@ interface Testimonial {
 }
 
 const partners: Partner[] = [
+  { name: 'Stripe' },
   { name: 'Vercel' },
   { name: 'GitHub' },
-  { name: 'TEC Partners' },
+  { name: 'Supabase' },
   { name: 'AWS' },
-  { name: 'Google Cloud' },
 ];
 
 const testimonials: Testimonial[] = [
@@ -47,20 +46,28 @@ const testimonials: Testimonial[] = [
   },
 ];
 
+// Trust badges for enterprise credibility
+const trustBadges = [
+  { label: 'SOC 2', description: 'Type II Certified' },
+  { label: 'GDPR', description: 'Compliant' },
+  { label: 'LGPD', description: 'Compliant' },
+  { label: '99.99%', description: 'SLA Guarantee' },
+];
+
 export const SocialProof = () => {
   return (
     <section className="py-20 bg-secondary/20">
       <div className="container mx-auto px-4">
         {/* Partners */}
         <div className="text-center mb-16">
-          <p className="text-sm text-muted-foreground mb-8">
-            CONFIADO POR EMPRESAS LÍDERES
+          <p className="text-sm text-muted-foreground mb-8 uppercase tracking-wider">
+            Tecnologia de Parceiros Líderes
           </p>
           <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16">
             {partners.map((partner) => (
               <div
                 key={partner.name}
-                className="text-2xl font-bold text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                className="text-2xl font-bold text-muted-foreground/50 hover:text-muted-foreground transition-colors cursor-default"
               >
                 {partner.name}
               </div>
@@ -68,12 +75,25 @@ export const SocialProof = () => {
           </div>
         </div>
 
+        {/* Trust Badges */}
+        <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
+          {trustBadges.map((badge) => (
+            <div
+              key={badge.label}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20"
+            >
+              <span className="font-bold text-primary">{badge.label}</span>
+              <span className="text-xs text-muted-foreground">{badge.description}</span>
+            </div>
+          ))}
+        </div>
+
         {/* Testimonials */}
         <div className="grid md:grid-cols-3 gap-6">
           {testimonials.map((testimonial, index) => (
             <Card
               key={index}
-              className="p-6 bg-card/50 backdrop-blur border-border/50 relative overflow-hidden"
+              className="p-6 bg-card/50 backdrop-blur border-border/50 relative overflow-hidden hover:border-primary/30 transition-colors"
             >
               <Quote className="absolute top-4 right-4 w-8 h-8 text-primary/10" />
               

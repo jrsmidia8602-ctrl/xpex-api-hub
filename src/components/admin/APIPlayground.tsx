@@ -1,14 +1,16 @@
-import { useState } from "react";
-import { Play, Copy, Check, Code2, Terminal, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Play, Copy, Check, Code2, Terminal, Loader2, History, RotateCcw, Trash2, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { useAPIKeys } from "@/hooks/useAPIKeys";
+import { analytics } from "@/lib/analytics";
+import { Badge } from "@/components/ui/badge";
 
 interface APIEndpoint {
   id: string;
@@ -18,6 +20,15 @@ interface APIEndpoint {
   description: string;
   params: { name: string; type: string; required: boolean; description: string }[];
   exampleBody?: Record<string, unknown>;
+}
+
+interface RequestHistoryItem {
+  id: string;
+  endpoint: string;
+  params: Record<string, string>;
+  response: string;
+  status: number;
+  timestamp: Date;
 }
 
 const endpoints: APIEndpoint[] = [
@@ -53,6 +64,9 @@ const endpoints: APIEndpoint[] = [
     exampleBody: {},
   },
 ];
+
+const HISTORY_KEY = "xpex_api_playground_history";
+const MAX_HISTORY_ITEMS = 50;
 
 function generateCodeExample(endpoint: APIEndpoint, params: Record<string, string>, apiKey: string): { curl: string; javascript: string; python: string } {
   const baseUrl = `https://bgfjhietjsrlzscxdutt.supabase.co/functions/v1${endpoint.path}`;
@@ -97,10 +111,47 @@ export function APIPlayground() {
   const [selectedEndpoint, setSelectedEndpoint] = useState<string>(endpoints[0].id);
   const [params, setParams] = useState<Record<string, string>>({});
   const [apiKey, setApiKey] = useState("");
+  const [selectedKeyId, setSelectedKeyId] = useState<string>("");
   const [response, setResponse] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [history, setHistory] = useState<RequestHistoryItem[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
+  const { keys, loading: keysLoading } = useAPIKeys();
+
+  // Load history from localStorage
+  useEffect(() => {
+    const savedHistory = localStorage.getItem(HISTORY_KEY);
+    if (savedHistory) {
+      try {
+        const parsed = JSON.parse(savedHistory);
+        setHistory(parsed.map((item: RequestHistoryItem) => ({
+          ...item,
+          timestamp: new Date(item.timestamp)
+        })));
+      } catch (e) {
+        console.error("Failed to parse history:", e);
+      }
+    }
+  }, []);
+
+  // Save history to localStorage
+  useEffect(() => {
+    if (history.length > 0) {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    }
+  }, [history]);
+
+  // When a key is selected from dropdown, update the apiKey state
+  useEffect(() => {
+    if (selectedKeyId && keys.length > 0) {
+      const selectedKey = keys.find(k => k.id === selectedKeyId);
+      if (selectedKey) {
+        setApiKey(selectedKey.key);
+      }
+    }
+  }, [selectedKeyId, keys]);
 
   const endpoint = endpoints.find((e) => e.id === selectedEndpoint)!;
   const codeExamples = generateCodeExample(endpoint, params, apiKey);
@@ -111,11 +162,46 @@ export function APIPlayground() {
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const addToHistory = (endpointId: string, requestParams: Record<string, string>, responseText: string, status: number) => {
+    const newItem: RequestHistoryItem = {
+      id: crypto.randomUUID(),
+      endpoint: endpointId,
+      params: requestParams,
+      response: responseText,
+      status,
+      timestamp: new Date(),
+    };
+
+    setHistory(prev => {
+      const updated = [newItem, ...prev].slice(0, MAX_HISTORY_ITEMS);
+      return updated;
+    });
+  };
+
+  const replayRequest = (item: RequestHistoryItem) => {
+    setSelectedEndpoint(item.endpoint);
+    setParams(item.params);
+    setShowHistory(false);
+    toast({
+      title: "Requisição carregada",
+      description: "Clique em 'Executar' para repetir a requisição.",
+    });
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem(HISTORY_KEY);
+    toast({
+      title: "Histórico limpo",
+      description: "Todo o histórico de requisições foi removido.",
+    });
+  };
+
   const handleExecute = async () => {
     if (!apiKey) {
       toast({
         title: "API Key necessária",
-        description: "Insira sua API Key para executar a requisição.",
+        description: "Selecione ou insira sua API Key para executar a requisição.",
         variant: "destructive",
       });
       return;
@@ -138,7 +224,17 @@ export function APIPlayground() {
       });
 
       const data = await res.json();
-      setResponse(JSON.stringify(data, null, 2));
+      const responseText = JSON.stringify(data, null, 2);
+      setResponse(responseText);
+
+      // Add to history
+      addToHistory(endpoint.id, params, responseText, res.status);
+
+      // Track analytics
+      analytics.track('api_playground_used', {
+        endpoint: endpoint.id,
+        status: res.status,
+      });
 
       toast({
         title: res.ok ? "Sucesso!" : "Erro na requisição",
@@ -147,7 +243,9 @@ export function APIPlayground() {
       });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
-      setResponse(JSON.stringify({ error: errorMessage }, null, 2));
+      const errorResponse = JSON.stringify({ error: errorMessage }, null, 2);
+      setResponse(errorResponse);
+      addToHistory(endpoint.id, params, errorResponse, 500);
       toast({
         title: "Erro",
         description: errorMessage,
@@ -161,117 +259,221 @@ export function APIPlayground() {
   return (
     <Card className="card-cyber">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Terminal className="h-5 w-5 text-primary" />
-          API Playground
-        </CardTitle>
-        <CardDescription>Teste as APIs diretamente com exemplos de código</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Terminal className="h-5 w-5 text-primary" />
+              API Playground
+            </CardTitle>
+            <CardDescription>Teste as APIs diretamente com exemplos de código</CardDescription>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowHistory(!showHistory)}
+            className="gap-2"
+          >
+            <History className="h-4 w-4" />
+            Histórico ({history.length})
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Endpoint</Label>
-            <Select value={selectedEndpoint} onValueChange={setSelectedEndpoint}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {endpoints.map((ep) => (
-                  <SelectItem key={ep.id} value={ep.id}>
-                    <span className="flex items-center gap-2">
-                      <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${ep.method === "GET" ? "bg-green-500/20 text-green-400" : "bg-blue-500/20 text-blue-400"}`}>
-                        {ep.method}
-                      </span>
-                      {ep.name}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">{endpoint.description}</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="api-key">API Key</Label>
-            <Input
-              id="api-key"
-              type="password"
-              placeholder="Sua API Key"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {endpoint.params.length > 0 && (
-          <div className="space-y-3">
-            <Label>Parâmetros</Label>
-            {endpoint.params.map((param) => (
-              <div key={param.name} className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor={param.name} className="text-xs font-mono">
-                    {param.name}
-                    {param.required && <span className="text-destructive">*</span>}
-                  </Label>
-                  <span className="text-xs text-muted-foreground">({param.type})</span>
+        {showHistory ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm">Histórico de Requisições</h3>
+              {history.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={clearHistory} className="text-destructive">
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Limpar
+                </Button>
+              )}
+            </div>
+            <ScrollArea className="h-[400px]">
+              {history.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-8">
+                  Nenhuma requisição no histórico
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {history.map((item) => {
+                    const ep = endpoints.find(e => e.id === item.endpoint);
+                    return (
+                      <div
+                        key={item.id}
+                        className="p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={item.status < 400 ? "default" : "destructive"}>
+                              {item.status}
+                            </Badge>
+                            <span className="font-medium text-sm">{ep?.name || item.endpoint}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => replayRequest(item)}
+                          >
+                            <RotateCcw className="h-4 w-4 mr-1" />
+                            Repetir
+                          </Button>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {item.timestamp.toLocaleString('pt-BR')}
+                        </div>
+                        {Object.keys(item.params).length > 0 && (
+                          <div className="text-xs font-mono mt-1 text-muted-foreground">
+                            Params: {JSON.stringify(item.params)}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <Input
-                  id={param.name}
-                  placeholder={param.description}
-                  value={params[param.name] || ""}
-                  onChange={(e) => setParams((prev) => ({ ...prev, [param.name]: e.target.value }))}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        <Button onClick={handleExecute} disabled={isLoading} className="w-full" variant="neon">
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Executando...
-            </>
-          ) : (
-            <>
-              <Play className="h-4 w-4 mr-2" />
-              Executar Requisição
-            </>
-          )}
-        </Button>
-
-        <Tabs defaultValue="curl" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="curl">cURL</TabsTrigger>
-            <TabsTrigger value="javascript">JavaScript</TabsTrigger>
-            <TabsTrigger value="python">Python</TabsTrigger>
-          </TabsList>
-          {(["curl", "javascript", "python"] as const).map((lang) => (
-            <TabsContent key={lang} value={lang} className="relative">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-2 h-8 w-8"
-                onClick={() => handleCopy(codeExamples[lang], lang)}
-              >
-                {copied === lang ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
-              </Button>
-              <ScrollArea className="h-[150px] w-full rounded-md border border-border/50 bg-muted/50 p-4">
-                <pre className="text-xs font-mono whitespace-pre-wrap">{codeExamples[lang]}</pre>
-              </ScrollArea>
-            </TabsContent>
-          ))}
-        </Tabs>
-
-        {response && (
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Code2 className="h-4 w-4" />
-              Resposta
-            </Label>
-            <ScrollArea className="h-[200px] w-full rounded-md border border-border/50 bg-muted/50 p-4">
-              <pre className="text-xs font-mono whitespace-pre-wrap text-green-400">{response}</pre>
+              )}
             </ScrollArea>
+            <Button variant="outline" className="w-full" onClick={() => setShowHistory(false)}>
+              Voltar ao Playground
+            </Button>
           </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Endpoint</Label>
+                <Select value={selectedEndpoint} onValueChange={setSelectedEndpoint}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {endpoints.map((ep) => (
+                      <SelectItem key={ep.id} value={ep.id}>
+                        <span className="flex items-center gap-2">
+                          <span className={`text-xs font-mono px-1.5 py-0.5 rounded ${ep.method === "GET" ? "bg-green-500/20 text-green-400" : "bg-blue-500/20 text-blue-400"}`}>
+                            {ep.method}
+                          </span>
+                          {ep.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{endpoint.description}</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Key className="h-3 w-3" />
+                  API Key
+                </Label>
+                {keys.length > 0 ? (
+                  <Select value={selectedKeyId} onValueChange={setSelectedKeyId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma API Key" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {keys.filter(k => k.status === 'active').map((key) => (
+                        <SelectItem key={key.id} value={key.id}>
+                          <span className="flex items-center gap-2">
+                            <span className="font-medium">{key.name}</span>
+                            <span className="text-xs text-muted-foreground font-mono">
+                              ...{key.key.slice(-8)}
+                            </span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="api-key"
+                    type="password"
+                    placeholder="Sua API Key"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                  />
+                )}
+                {keys.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {keysLoading ? "Carregando..." : `${keys.filter(k => k.status === 'active').length} chave(s) ativa(s)`}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {endpoint.params.length > 0 && (
+              <div className="space-y-3">
+                <Label>Parâmetros</Label>
+                {endpoint.params.map((param) => (
+                  <div key={param.name} className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={param.name} className="text-xs font-mono">
+                        {param.name}
+                        {param.required && <span className="text-destructive">*</span>}
+                      </Label>
+                      <span className="text-xs text-muted-foreground">({param.type})</span>
+                    </div>
+                    <Input
+                      id={param.name}
+                      placeholder={param.description}
+                      value={params[param.name] || ""}
+                      onChange={(e) => setParams((prev) => ({ ...prev, [param.name]: e.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <Button onClick={handleExecute} disabled={isLoading} className="w-full" variant="neon">
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Executando...
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 mr-2" />
+                  Executar Requisição
+                </>
+              )}
+            </Button>
+
+            <Tabs defaultValue="curl" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="curl">cURL</TabsTrigger>
+                <TabsTrigger value="javascript">JavaScript</TabsTrigger>
+                <TabsTrigger value="python">Python</TabsTrigger>
+              </TabsList>
+              {(["curl", "javascript", "python"] as const).map((lang) => (
+                <TabsContent key={lang} value={lang} className="relative">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-2 h-8 w-8"
+                    onClick={() => handleCopy(codeExamples[lang], lang)}
+                  >
+                    {copied === lang ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                  <ScrollArea className="h-[150px] w-full rounded-md border border-border/50 bg-muted/50 p-4">
+                    <pre className="text-xs font-mono whitespace-pre-wrap">{codeExamples[lang]}</pre>
+                  </ScrollArea>
+                </TabsContent>
+              ))}
+            </Tabs>
+
+            {response && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Code2 className="h-4 w-4" />
+                  Resposta
+                </Label>
+                <ScrollArea className="h-[200px] w-full rounded-md border border-border/50 bg-muted/50 p-4">
+                  <pre className="text-xs font-mono whitespace-pre-wrap text-green-400">{response}</pre>
+                </ScrollArea>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

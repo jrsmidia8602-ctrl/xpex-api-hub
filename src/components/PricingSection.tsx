@@ -4,6 +4,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import CreditPackages from "./CreditPackages";
+import { analytics } from "@/lib/analytics";
 
 const plans = [
   {
@@ -70,16 +71,21 @@ const PricingSection = () => {
   const navigate = useNavigate();
 
   const handlePlanClick = async (tier: 'free' | 'pro' | 'enterprise') => {
+    analytics.trackPlanSelected(tier);
+    
     if (!user) {
+      analytics.trackCTAClick('plan_auth_redirect', 'pricing');
       navigate('/auth');
       return;
     }
 
     if (tier === 'free') {
+      analytics.trackCTAClick('free_plan_dashboard', 'pricing');
       navigate('/dashboard');
       return;
     }
 
+    analytics.trackCheckoutInitiated(tier, tier === 'pro' ? 29 : 199);
     await startCheckout(tier);
   };
 

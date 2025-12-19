@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { analytics } from '@/lib/analytics';
 
 export interface APIKey {
   id: string;
@@ -67,6 +68,7 @@ export const useAPIKeys = () => {
 
     setKeys([data, ...keys]);
     toast.success('Nova API Key gerada!');
+    analytics.trackAPIKeyGenerated(name);
     return data;
   };
 
@@ -84,6 +86,7 @@ export const useAPIKeys = () => {
 
     setKeys(keys.filter((k) => k.id !== id));
     toast.success('API Key removida');
+    analytics.track('api_key_deleted', { key_id: id });
     return true;
   };
 

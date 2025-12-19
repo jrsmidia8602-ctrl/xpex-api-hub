@@ -12,6 +12,7 @@ import { LiveMetricsPanel } from "@/components/admin/LiveMetricsPanel";
 import { LatencyGraph } from "@/components/admin/LatencyGraph";
 import { EndpointBreakdown } from "@/components/admin/EndpointBreakdown";
 import { ReferralCard } from "@/components/admin/ReferralCard";
+import { ReferralLeaderboard } from "@/components/admin/ReferralLeaderboard";
 import { WebhooksManager } from "@/components/admin/WebhooksManager";
 import { useAuth } from "@/hooks/useAuth";
 import { useAPIKeys } from "@/hooks/useAPIKeys";
@@ -142,8 +143,9 @@ const Dashboard = () => {
         </div>
 
         {/* Referral and Webhooks */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <ReferralCard />
+          <ReferralLeaderboard />
           <WebhooksManager />
         </div>
 

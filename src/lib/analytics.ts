@@ -1,5 +1,5 @@
 // Analytics tracking utility for conversion events
-// Extensible to integrate with Google Analytics, Mixpanel, etc.
+// Integrated with Google Analytics 4
 
 type EventName = 
   | 'cta_click'
@@ -11,10 +11,18 @@ type EventName =
   | 'credits_purchased'
   | 'demo_started'
   | 'signup_started'
-  | 'login_completed';
+  | 'login_completed'
+  | 'page_view';
 
 interface EventProperties {
-  [key: string]: string | number | boolean | undefined;
+  [key: string]: string | number | boolean | undefined | Record<string, any>[] | Record<string, any>;
+}
+
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+    dataLayer?: any[];
+  }
 }
 
 class Analytics {
@@ -34,19 +42,39 @@ class Analytics {
     };
 
     // Log to console in development
-    console.log('[Analytics]', event.name, event.properties);
-
-    // Send to any analytics service
-    this.sendToService(event);
-  }
-
-  private sendToService(event: { name: string; properties: EventProperties }) {
-    // Google Analytics 4
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', event.name, event.properties);
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Analytics]', event.name, event.properties);
     }
 
+    // Send to Google Analytics 4
+    this.sendToGA4(eventName, properties);
+
     // Store in localStorage for debugging
+    this.storeLocally(event);
+  }
+
+  private sendToGA4(eventName: string, properties?: EventProperties) {
+    if (typeof window !== 'undefined' && window.gtag) {
+      // Map custom events to GA4 recommended events where applicable
+      const ga4EventMap: Record<string, string> = {
+        'checkout_initiated': 'begin_checkout',
+        'plan_selected': 'select_item',
+        'credits_purchased': 'purchase',
+        'signup_started': 'sign_up',
+        'login_completed': 'login',
+      };
+
+      const ga4EventName = ga4EventMap[eventName] || eventName;
+      
+      window.gtag('event', ga4EventName, {
+        event_category: 'conversion',
+        event_label: eventName,
+        ...properties,
+      });
+    }
+  }
+
+  private storeLocally(event: { name: string; properties: EventProperties }) {
     if (typeof window !== 'undefined') {
       try {
         const events = JSON.parse(localStorage.getItem('xpex_analytics') || '[]');
@@ -60,33 +88,71 @@ class Analytics {
     }
   }
 
+  // Page view tracking
+  trackPageView(pagePath: string, pageTitle?: string) {
+    if (typeof window !== 'undefined' && window.gtag) {
+      window.gtag('event', 'page_view', {
+        page_path: pagePath,
+        page_title: pageTitle,
+      });
+    }
+    this.track('page_view', { page_path: pagePath, page_title: pageTitle });
+  }
+
   // Convenience methods for common events
   trackCTAClick(ctaName: string, location?: string) {
     this.track('cta_click', { cta_name: ctaName, location });
   }
 
-  trackCheckoutInitiated(tier: string, price?: number) {
-    this.track('checkout_initiated', { tier, price });
+  trackCheckoutInitiated(tier: string, price?: number, priceId?: string) {
+    this.track('checkout_initiated', { 
+      tier, 
+      price,
+      currency: 'USD',
+      items: [{ item_name: tier, price }],
+      stripe_price_id: priceId
+    });
   }
 
   trackAPIKeyGenerated(keyName: string) {
     this.track('api_key_generated', { key_name: keyName });
   }
 
+  trackAPIKeyDeleted(keyName: string) {
+    this.track('api_key_deleted', { key_name: keyName });
+  }
+
   trackEmailValidated(isValid: boolean, riskScore?: number) {
     this.track('email_validated', { is_valid: isValid, risk_score: riskScore });
   }
 
-  trackPlanSelected(tier: string) {
-    this.track('plan_selected', { tier });
+  trackPlanSelected(tier: string, price?: number) {
+    this.track('plan_selected', { 
+      tier,
+      value: price,
+      currency: 'USD'
+    });
   }
 
-  trackCreditsPackage(packageName: string, credits: number) {
-    this.track('credits_purchased', { package_name: packageName, credits });
+  trackCreditsPackage(packageName: string, credits: number, price?: number) {
+    this.track('credits_purchased', { 
+      package_name: packageName, 
+      credits,
+      value: price,
+      currency: 'USD'
+    });
   }
 
   trackDemoStarted(apiName: string) {
     this.track('demo_started', { api_name: apiName });
+  }
+
+  trackSignupStarted(method?: string) {
+    this.track('signup_started', { method });
+  }
+
+  trackLoginCompleted(method?: string) {
+    this.track('login_completed', { method });
   }
 }
 

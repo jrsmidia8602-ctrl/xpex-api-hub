@@ -28,6 +28,9 @@ import GoldEmailValidator from "./pages/GoldEmailValidator";
 import BridgeScan from "./pages/products/BridgeScan";
 import IPInsight from "./pages/products/IPInsight";
 import LinkMagic from "./pages/products/LinkMagic";
+import BreachScan from "./pages/products/BreachScan";
+import CopyVoraz from "./pages/products/CopyVoraz";
+import ExtrairProdutos from "./pages/products/ExtrairProdutos";
 import Credits from "./pages/Credits";
 import NotFound from "./pages/NotFound";
 import CookieConsent from "./components/CookieConsent";
@@ -61,7 +64,9 @@ const App = () => (
                 <Route path="/products/bridgescan" element={<BridgeScan />} />
                 <Route path="/products/ip-insight" element={<IPInsight />} />
                 <Route path="/products/link-magic" element={<LinkMagic />} />
-                <Route path="/gold-email-validator" element={<GoldEmailValidator />} />
+                <Route path="/products/breach-scan" element={<BreachScan />} />
+                <Route path="/products/copy-voraz" element={<CopyVoraz />} />
+                <Route path="/products/extrair-produtos" element={<ExtrairProdutos />} />
                 <Route path="/credits" element={<Credits />} />
                 <Route
                   path="/dashboard" 

@@ -33,6 +33,7 @@ const apis = [
     calls: "500K+",
     featured: false,
     features: ["Breach Database", "Risk Assessment", "Exposure Details"],
+    href: "/products/breach-scan",
   },
   {
     id: "ip-insight",
@@ -45,6 +46,7 @@ const apis = [
     calls: "1.2M+",
     featured: false,
     features: ["Geolocation", "VPN Detection", "Threat Score"],
+    href: "/products/ip-insight",
   },
   {
     id: "copy-voraz",
@@ -57,6 +59,7 @@ const apis = [
     calls: "200K+",
     featured: false,
     features: ["Viral Headlines", "Multiple Tones", "A/B Variants"],
+    href: "/products/copy-voraz",
   },
   {
     id: "extrair-produtos",
@@ -69,10 +72,11 @@ const apis = [
     calls: "800K+",
     featured: false,
     features: ["Multi-marketplace", "Price Tracking", "Structured Data"],
+    href: "/products/extrair-produtos",
   },
   {
-    id: "link-medic",
-    name: "LinkMedic",
+    id: "link-magic",
+    name: "LinkMagic",
     description: "URL health checking, redirect analysis, and broken link detection.",
     icon: Link2,
     category: "Utility",
@@ -81,6 +85,7 @@ const apis = [
     calls: "600K+",
     featured: false,
     features: ["Health Check", "Redirect Chain", "SSL Validation"],
+    href: "/products/link-magic",
   },
 ];
 

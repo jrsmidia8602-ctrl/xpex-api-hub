@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Send, Mail, MessageSquare, User } from "lucide-react";
@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { analytics } from "@/lib/analytics";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -18,6 +19,17 @@ const Contact = () => {
     subject: "",
     message: "",
   });
+
+  // Track form started when user begins filling
+  const [formStarted, setFormStarted] = useState(false);
+
+  useEffect(() => {
+    const hasInput = formData.name || formData.email || formData.subject || formData.message;
+    if (hasInput && !formStarted) {
+      setFormStarted(true);
+      analytics.trackFormStarted("contact_form", "contact", "/contact");
+    }
+  }, [formData, formStarted]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,14 +42,22 @@ const Contact = () => {
 
       if (error) throw error;
 
+      // Track successful form submission
+      analytics.trackFormSubmitted("contact_form", "contact", "/contact", true);
+
       toast({
         title: "Message sent!",
         description: "We'll get back to you within 24 hours.",
       });
 
       setFormData({ name: "", email: "", subject: "", message: "" });
+      setFormStarted(false);
     } catch (error: any) {
       console.error("Error sending message:", error);
+      
+      // Track failed form submission
+      analytics.trackFormSubmitted("contact_form", "contact", "/contact", false, error.message);
+      
       toast({
         title: "Failed to send message",
         description: error.message || "Please try again later.",

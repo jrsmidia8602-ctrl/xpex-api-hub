@@ -1,15 +1,25 @@
 import { Zap, Github, Twitter, Linkedin, Mail, Send } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { analytics } from "@/lib/analytics";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formStarted, setFormStarted] = useState(false);
+
+  // Track form started when user begins typing email
+  useEffect(() => {
+    if (email && !formStarted) {
+      setFormStarted(true);
+      analytics.trackFormStarted("newsletter_form", "newsletter", "/footer");
+    }
+  }, [email, formStarted]);
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,14 +33,22 @@ const Footer = () => {
 
       if (error) throw error;
 
+      // Track successful newsletter subscription
+      analytics.trackFormSubmitted("newsletter_form", "newsletter", "/footer", true);
+
       if (data?.alreadySubscribed) {
         toast.info("You're already subscribed to our newsletter!");
       } else {
         toast.success("Subscribed! Welcome to the XPEX Neural newsletter.");
       }
       setEmail("");
+      setFormStarted(false);
     } catch (error: any) {
       console.error("Newsletter subscription error:", error);
+      
+      // Track failed newsletter subscription
+      analytics.trackFormSubmitted("newsletter_form", "newsletter", "/footer", false, error.message);
+      
       toast.error("Failed to subscribe. Please try again.");
     } finally {
       setIsSubmitting(false);

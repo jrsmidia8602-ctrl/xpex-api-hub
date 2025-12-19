@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 import LiveValidator from "./LiveValidator";
+import { useValidationStats } from "@/hooks/useValidationStats";
 
 const HeroSection = () => {
+  const { stats } = useValidationStats();
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
       {/* Background Grid */}
@@ -64,9 +67,9 @@ const HeroSection = () => {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-8 mt-16 animate-fade-in" style={{ animationDelay: "0.4s" }}>
             {[
-              { value: "6+", label: "APIs Prontas" },
-              { value: "<100ms", label: "Latência" },
-              { value: "99.9%", label: "Uptime" },
+              { value: `${(stats.total_validations / 1000000).toFixed(1)}M+`, label: "Validações" },
+              { value: `${stats.avg_latency_ms}ms`, label: "Latência" },
+              { value: `${stats.success_rate}%`, label: "Precisão" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
                 <div className="text-3xl md:text-4xl font-bold text-gradient mb-1">

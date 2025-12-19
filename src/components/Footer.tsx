@@ -40,18 +40,18 @@ const Footer = () => {
   const links = {
     product: [
       { name: "APIs", href: "/marketplace", isRoute: true },
-      { name: "Pricing", href: "/pricing", isRoute: true },
-      { name: "Documentation", href: "/docs", isRoute: true },
+      { name: "Preços", href: "/pricing", isRoute: true },
+      { name: "Documentação", href: "/docs", isRoute: true },
       { name: "Status", href: "/status", isRoute: true },
     ],
     company: [
-      { name: "About", href: "/about", isRoute: true },
+      { name: "Sobre", href: "/about", isRoute: true },
       { name: "Blog", href: "/blog", isRoute: true },
-      { name: "Contact", href: "/contact", isRoute: true },
+      { name: "Contato", href: "/contact", isRoute: true },
     ],
     legal: [
-      { name: "Privacy", href: "/legal/privacy", isRoute: true },
-      { name: "Terms", href: "/legal/terms", isRoute: true },
+      { name: "Privacidade", href: "/legal/privacy", isRoute: true },
+      { name: "Termos", href: "/legal/terms", isRoute: true },
       { name: "SLA", href: "/legal/sla", isRoute: true },
     ],
   };
@@ -70,8 +70,8 @@ const Footer = () => {
               </span>
             </Link>
             <p className="text-muted-foreground text-sm mb-6 max-w-sm">
-              Build APIs. Agents work for you. Money flows in. 
-              The autonomous wealth engine for the Agent Economy.
+              Construa APIs. Agentes trabalham para você. Dinheiro flui. 
+              O motor de riqueza autônomo para a Economia de Agentes.
             </p>
             <div className="flex gap-4">
               <a href="mailto:xpexneural@gmail.com" className="text-muted-foreground hover:text-primary transition-colors">
@@ -91,7 +91,7 @@ const Footer = () => {
 
           {/* Links */}
           <div>
-            <h4 className="font-semibold mb-4">Product</h4>
+            <h4 className="font-semibold mb-4">Produto</h4>
             <ul className="space-y-3">
               {links.product.map((link) => (
                 <li key={link.name}>
@@ -116,7 +116,7 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">Company</h4>
+            <h4 className="font-semibold mb-4">Empresa</h4>
             <ul className="space-y-3">
               {links.company.map((link) => (
                 <li key={link.name}>
@@ -169,12 +169,12 @@ const Footer = () => {
           <div>
             <h4 className="font-semibold mb-4">Newsletter</h4>
             <p className="text-muted-foreground text-sm mb-4">
-              Stay updated with the latest APIs and agent economy insights.
+              Fique atualizado com as últimas APIs e insights da economia de agentes.
             </p>
             <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
               <Input
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Digite seu email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-background/50 border-border/50 text-sm"
@@ -195,10 +195,10 @@ const Footer = () => {
         {/* Bottom */}
         <div className="mt-16 pt-8 border-t border-border/30 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">
-            © {currentYear} XPEX Neural. All rights reserved.
+            © {currentYear} XPEX Neural. Todos os direitos reservados.
           </p>
           <p className="text-sm text-muted-foreground font-mono">
-            Built by <span className="text-primary">Servo</span> • Powered by AI Agents
+            Criado por <span className="text-primary">Servo</span> • Powered by AI Agents
           </p>
         </div>
       </div>

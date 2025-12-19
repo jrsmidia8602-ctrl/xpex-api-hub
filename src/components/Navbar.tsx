@@ -17,11 +17,14 @@ const Navbar = () => {
   const { user } = useAuth();
 
   const products = [
-    { name: "Gold Email Validator", href: "/products/gold-email-validator", description: "Enterprise-grade email validation API" },
+    { name: "GoldMail Validator", href: "/gold-email-validator", description: "API de validação de email enterprise" },
+    { name: "Bridge Scan", href: "/marketplace", description: "Verificação de vazamentos de dados" },
+    { name: "IP Insight", href: "/marketplace", description: "Geolocalização e análise de ameaças" },
+    { name: "Link Magic", href: "/marketplace", description: "Monitoramento de saúde de URLs" },
   ];
 
   const navLinks = [
-    { name: "Pricing", href: "/pricing", isRoute: true },
+    { name: "Preços", href: "/pricing", isRoute: true },
     { name: "Docs", href: "/docs", isRoute: true },
     { name: "Status", href: "/status", isRoute: true },
   ];
@@ -46,7 +49,7 @@ const Navbar = () => {
               <NavigationMenuList>
                 <NavigationMenuItem>
                   <NavigationMenuTrigger className="bg-transparent text-muted-foreground hover:text-primary text-sm font-medium">
-                    Products
+                    Produtos
                   </NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid w-[280px] gap-2 p-3 bg-background border border-border rounded-lg">
@@ -69,7 +72,7 @@ const Navbar = () => {
                             to="/marketplace"
                             className="block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground text-sm font-medium text-primary"
                           >
-                            View All APIs →
+                            Ver Todas as APIs →
                           </Link>
                         </NavigationMenuLink>
                       </li>
@@ -102,7 +105,7 @@ const Navbar = () => {
                   <Button variant="ghost" size="sm">Login</Button>
                 </Link>
                 <Link to="/auth">
-                  <Button variant="neon" size="sm">Get API Key</Button>
+                  <Button variant="neon" size="sm">Obter API Key</Button>
                 </Link>
               </>
             )}
@@ -116,14 +119,14 @@ const Navbar = () => {
         {isOpen && (
           <div className="md:hidden py-4 border-t border-border/50">
             <div className="flex flex-col gap-4">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">Products</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">Produtos</div>
               {products.map((product) => (
                 <Link key={product.name} to={product.href} className="text-muted-foreground hover:text-primary transition-colors pl-2" onClick={() => setIsOpen(false)}>
                   {product.name}
                 </Link>
               ))}
               <Link to="/marketplace" className="text-primary hover:text-primary/80 transition-colors pl-2" onClick={() => setIsOpen(false)}>
-                View All APIs →
+                Ver Todas as APIs →
               </Link>
               <div className="border-t border-border/50 pt-4 mt-2">
                 {navLinks.map((link) =>

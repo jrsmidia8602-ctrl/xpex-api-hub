@@ -15,6 +15,8 @@ import { ReferralCard } from "@/components/admin/ReferralCard";
 import { ReferralLeaderboard } from "@/components/admin/ReferralLeaderboard";
 import { ReferralEvolutionChart } from "@/components/admin/ReferralEvolutionChart";
 import { WebhooksManager } from "@/components/admin/WebhooksManager";
+import { AchievementsPanel } from "@/components/admin/AchievementsPanel";
+import { PushNotificationSettings } from "@/components/admin/PushNotificationSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { useAPIKeys } from "@/hooks/useAPIKeys";
 import { useUsageLogs } from "@/hooks/useUsageLogs";
@@ -153,6 +155,12 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <ReferralLeaderboard />
           <WebhooksManager />
+        </div>
+
+        {/* Achievements and Notifications */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <AchievementsPanel />
+          <PushNotificationSettings />
         </div>
 
         {/* API Keys Table */}

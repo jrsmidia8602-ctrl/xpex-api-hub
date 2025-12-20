@@ -22,6 +22,8 @@ import { Navigate } from "react-router-dom";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import RealtimeEventsDashboard from "@/components/admin/RealtimeEventsDashboard";
 import ConversionAlerts from "@/components/admin/ConversionAlerts";
+import { ConversionFunnel } from "@/components/admin/ConversionFunnel";
+import { ConversionTrendCharts } from "@/components/admin/ConversionTrendCharts";
 
 const statsData = [
   { label: "Total Users", value: "2,847", change: "+12%", icon: Users },
@@ -217,6 +219,8 @@ const Admin = () => {
 
           <TabsContent value="analytics" className="space-y-6">
             <ConversionAlerts />
+            <ConversionFunnel />
+            <ConversionTrendCharts />
             <RealtimeEventsDashboard />
             <AnalyticsDashboard />
           </TabsContent>

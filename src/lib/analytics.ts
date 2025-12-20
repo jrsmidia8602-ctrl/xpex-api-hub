@@ -112,7 +112,11 @@ interface EventProperties {
   [key: string]: string | number | boolean | undefined | Record<string, any>[] | Record<string, any>;
 }
 
+// GA4 Measurement ID - configured in index.html
+export const GA4_MEASUREMENT_ID = 'G-Q9S5Y4561Z';
+
 // Recommended conversions for GA4
+// These should be marked as conversions in GA4 Admin > Events > Mark as conversion
 export const RECOMMENDED_CONVERSIONS: EventName[] = [
   'signup_completed',
   'api_key_generated',
@@ -120,19 +124,77 @@ export const RECOMMENDED_CONVERSIONS: EventName[] = [
   'purchase_completed'
 ];
 
+// GA4 Conversion Events mapping to GA4 recommended event names
+export const GA4_CONVERSION_MAPPING: Record<string, string> = {
+  'signup_completed': 'sign_up',
+  'api_key_generated': 'generate_lead',
+  'checkout_started': 'begin_checkout',
+  'purchase_completed': 'purchase'
+};
+
+// Initialize GA4 with enhanced configuration
+export const initializeGA4 = () => {
+  if (typeof window === 'undefined' || !window.gtag) {
+    console.warn('[GA4] gtag not available');
+    return false;
+  }
+
+  // Configure GA4 with enhanced settings
+  window.gtag('config', GA4_MEASUREMENT_ID, {
+    send_page_view: true,
+    cookie_flags: 'SameSite=None;Secure',
+    anonymize_ip: true,
+    allow_google_signals: true,
+    allow_ad_personalization_signals: false,
+  });
+
+  console.log(`[GA4] Initialized with ID: ${GA4_MEASUREMENT_ID}`);
+  return true;
+};
+
 // Configure GA4 conversions programmatically
+// Note: Conversions must also be marked in GA4 Admin panel
 export const configureGA4Conversions = () => {
   if (typeof window !== 'undefined' && window.gtag) {
-    // Mark recommended events as conversions in GA4
+    console.log('[GA4] Recommended Conversions to configure in GA4 Admin:');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
     RECOMMENDED_CONVERSIONS.forEach((eventName) => {
-      window.gtag!('config', 'GA_MEASUREMENT_ID', {
-        // This sets up the event as a conversion
-        // Note: In production, replace GA_MEASUREMENT_ID with actual ID
-      });
-      
-      // Log conversion configuration
-      console.log(`[GA4] Configured conversion: ${eventName}`);
+      const ga4EventName = GA4_CONVERSION_MAPPING[eventName] || eventName;
+      console.log(`  ✓ ${eventName} → GA4: ${ga4EventName}`);
     });
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('[GA4] To mark as conversions:');
+    console.log('  1. Go to GA4 Admin → Events');
+    console.log('  2. Find each event above');
+    console.log('  3. Toggle "Mark as conversion"');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    return true;
+  }
+  return false;
+};
+
+// Track conversion event with enhanced data
+export const trackGA4Conversion = (
+  eventName: EventName, 
+  value?: number, 
+  currency = 'BRL',
+  additionalParams?: Record<string, any>
+) => {
+  if (typeof window !== 'undefined' && window.gtag) {
+    const ga4EventName = GA4_CONVERSION_MAPPING[eventName] || eventName;
+    
+    window.gtag('event', ga4EventName, {
+      event_category: 'conversion',
+      event_label: eventName,
+      value: value,
+      currency: currency,
+      ...additionalParams
+    });
+    
+    console.log(`[GA4] Conversion tracked: ${eventName} (${ga4EventName})`, { value, currency });
   }
 };
 

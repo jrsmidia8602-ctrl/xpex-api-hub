@@ -20,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import { Navigate } from "react-router-dom";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
+import RealtimeEventsDashboard from "@/components/admin/RealtimeEventsDashboard";
 
 const statsData = [
   { label: "Total Users", value: "2,847", change: "+12%", icon: Users },
@@ -213,7 +214,8 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="analytics">
+          <TabsContent value="analytics" className="space-y-6">
+            <RealtimeEventsDashboard />
             <AnalyticsDashboard />
           </TabsContent>
 

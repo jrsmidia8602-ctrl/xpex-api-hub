@@ -1,8 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { 
   BarChart3, 
   RefreshCw, 
@@ -15,7 +21,12 @@ import {
   Key,
   Eye,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Download,
+  Filter,
+  CalendarIcon,
+  FileJson,
+  FileSpreadsheet
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
@@ -33,6 +44,18 @@ interface TrackedEvent {
     [key: string]: any;
   };
 }
+
+const CATEGORIES = [
+  { value: "all", label: "Todas as Categorias" },
+  { value: "navigation", label: "Navegação" },
+  { value: "engagement", label: "Engajamento" },
+  { value: "conversion", label: "Conversão" },
+  { value: "onboarding", label: "Onboarding" },
+  { value: "auth", label: "Autenticação" },
+  { value: "product", label: "Produto" },
+  { value: "api", label: "API" },
+  { value: "billing", label: "Faturamento" },
+];
 
 const CATEGORY_COLORS: Record<string, string> = {
   navigation: "hsl(var(--chart-1))",
@@ -95,6 +118,11 @@ const RealtimeEventsDashboard = () => {
   const [events, setEvents] = useState<TrackedEvent[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  
+  // Filters
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   const loadEvents = useCallback(() => {
     try {
@@ -116,6 +144,66 @@ const RealtimeEventsDashboard = () => {
     setEvents([]);
   };
 
+  const handleClearFilters = () => {
+    setSelectedCategory("all");
+    setStartDate(undefined);
+    setEndDate(undefined);
+  };
+
+  // Export functions
+  const exportToJSON = () => {
+    const dataStr = JSON.stringify(filteredEvents, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `xpex-events-${format(new Date(), "yyyy-MM-dd-HHmmss")}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToCSV = () => {
+    if (filteredEvents.length === 0) return;
+
+    // Get all unique property keys
+    const allKeys = new Set<string>();
+    filteredEvents.forEach((event) => {
+      allKeys.add("event_name");
+      allKeys.add("category");
+      Object.keys(event.properties).forEach((key) => allKeys.add(key));
+    });
+
+    const headers = Array.from(allKeys);
+    const csvRows = [
+      headers.join(","),
+      ...filteredEvents.map((event) => {
+        return headers
+          .map((header) => {
+            if (header === "event_name") return `"${event.name}"`;
+            if (header === "category") return `"${getEventCategory(event.name)}"`;
+            const value = event.properties[header];
+            if (value === undefined || value === null) return "";
+            if (typeof value === "object") return `"${JSON.stringify(value).replace(/"/g, '""')}"`;
+            return `"${String(value).replace(/"/g, '""')}"`;
+          })
+          .join(",");
+      }),
+    ];
+
+    const csvString = csvRows.join("\n");
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `xpex-events-${format(new Date(), "yyyy-MM-dd-HHmmss")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     loadEvents();
     
@@ -125,13 +213,43 @@ const RealtimeEventsDashboard = () => {
     }
   }, [loadEvents, autoRefresh]);
 
-  // Calculate statistics
-  const eventCounts = events.reduce((acc, event) => {
+  // Filter events
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      // Category filter
+      if (selectedCategory !== "all") {
+        const category = getEventCategory(event.name);
+        if (category !== selectedCategory) return false;
+      }
+
+      // Date filters
+      if (startDate || endDate) {
+        const eventDate = new Date(event.properties.timestamp);
+        
+        if (startDate) {
+          const start = new Date(startDate);
+          start.setHours(0, 0, 0, 0);
+          if (eventDate < start) return false;
+        }
+        
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setHours(23, 59, 59, 999);
+          if (eventDate > end) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [events, selectedCategory, startDate, endDate]);
+
+  // Calculate statistics from filtered events
+  const eventCounts = filteredEvents.reduce((acc, event) => {
     acc[event.name] = (acc[event.name] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const categoryCounts = events.reduce((acc, event) => {
+  const categoryCounts = filteredEvents.reduce((acc, event) => {
     const category = getEventCategory(event.name);
     acc[category] = (acc[category] || 0) + 1;
     return acc;
@@ -165,18 +283,22 @@ const RealtimeEventsDashboard = () => {
     return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   };
 
+  const hasActiveFilters = selectedCategory !== "all" || startDate || endDate;
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-primary" />
             Analytics em Tempo Real
           </h2>
-          <p className="text-muted-foreground">Eventos rastreados do localStorage</p>
+          <p className="text-muted-foreground">
+            {filteredEvents.length} eventos {hasActiveFilters && "(filtrados)"}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -184,7 +306,7 @@ const RealtimeEventsDashboard = () => {
             className={autoRefresh ? "border-primary text-primary" : ""}
           >
             <Activity className={`w-4 h-4 mr-2 ${autoRefresh ? "animate-pulse" : ""}`} />
-            {autoRefresh ? "Auto-refresh ON" : "Auto-refresh OFF"}
+            {autoRefresh ? "Auto ON" : "Auto OFF"}
           </Button>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
             <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -197,6 +319,124 @@ const RealtimeEventsDashboard = () => {
         </div>
       </div>
 
+      {/* Filters & Export */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col lg:flex-row lg:items-end gap-4">
+            {/* Category Filter */}
+            <div className="flex-1 space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Filter className="w-4 h-4" />
+                Categoria
+              </label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  {CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Start Date */}
+            <div className="flex-1 space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4" />
+                Data Início
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-background border z-50" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* End Date */}
+            <div className="flex-1 space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <CalendarIcon className="w-4 h-4" />
+                Data Fim
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-background border z-50" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Clear Filters */}
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+                Limpar filtros
+              </Button>
+            )}
+
+            {/* Export Buttons */}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToJSON}
+                disabled={filteredEvents.length === 0}
+              >
+                <FileJson className="w-4 h-4 mr-2" />
+                JSON
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToCSV}
+                disabled={filteredEvents.length === 0}
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                CSV
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
@@ -206,7 +446,7 @@ const RealtimeEventsDashboard = () => {
                 <Activity className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{events.length}</p>
+                <p className="text-2xl font-bold">{filteredEvents.length}</p>
                 <p className="text-sm text-muted-foreground">Total de Eventos</p>
               </div>
             </div>
@@ -381,9 +621,9 @@ const RealtimeEventsDashboard = () => {
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[400px]">
-            {events.length > 0 ? (
+            {filteredEvents.length > 0 ? (
               <div className="space-y-2">
-                {events.slice(0, 50).map((event, index) => {
+                {filteredEvents.slice(0, 50).map((event, index) => {
                   const Icon = EVENT_ICONS[event.name] || Activity;
                   const category = getEventCategory(event.name);
                   

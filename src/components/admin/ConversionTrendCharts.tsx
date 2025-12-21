@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -30,6 +32,7 @@ import {
   RefreshCw,
   ArrowUpRight,
   ArrowDownRight,
+  GitCompare,
 } from 'lucide-react';
 
 interface MetricData {
@@ -42,6 +45,11 @@ interface MetricData {
   apiKeyRate: number;
   checkoutRate: number;
   purchaseRate: number;
+  // Previous period data for comparison
+  prevSignups?: number;
+  prevApiKeys?: number;
+  prevCheckouts?: number;
+  prevPurchases?: number;
 }
 
 const PERIODS = [
@@ -58,18 +66,41 @@ const METRICS = [
   { key: 'purchases', name: 'Purchases', color: 'hsl(142, 76%, 36%)' },
 ];
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label, showComparison }: any) => {
   if (active && payload && payload.length) {
+    // Group current and previous period data
+    const currentData = payload.filter((p: any) => !p.dataKey.startsWith('prev'));
+    const prevData = payload.filter((p: any) => p.dataKey.startsWith('prev'));
+    
     return (
-      <div className="bg-card/95 backdrop-blur border border-border/50 rounded-lg p-3 shadow-lg">
+      <div className="bg-card/95 backdrop-blur border border-border/50 rounded-lg p-3 shadow-lg min-w-[180px]">
         <p className="text-sm font-medium text-foreground mb-2">{label}</p>
-        {payload.map((entry: any, index: number) => (
-          <p key={index} className="text-xs flex items-center gap-2" style={{ color: entry.color }}>
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-            {entry.name}: {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
-            {entry.name.includes('Rate') && '%'}
-          </p>
-        ))}
+        {currentData.map((entry: any, index: number) => {
+          const prevEntry = prevData.find((p: any) => p.dataKey === `prev${entry.dataKey.charAt(0).toUpperCase() + entry.dataKey.slice(1)}`);
+          const change = prevEntry && prevEntry.value > 0 
+            ? ((entry.value - prevEntry.value) / prevEntry.value * 100).toFixed(1)
+            : null;
+          
+          return (
+            <div key={index} className="mb-1.5">
+              <p className="text-xs flex items-center gap-2" style={{ color: entry.color }}>
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                {entry.name}: {typeof entry.value === 'number' ? entry.value.toLocaleString() : entry.value}
+                {entry.name.includes('Rate') && '%'}
+              </p>
+              {showComparison && prevEntry && (
+                <p className="text-[10px] ml-4 text-muted-foreground flex items-center gap-1">
+                  Semana anterior: {prevEntry.value.toLocaleString()}
+                  {change && (
+                    <span className={Number(change) >= 0 ? 'text-green-500' : 'text-red-500'}>
+                      ({Number(change) >= 0 ? '+' : ''}{change}%)
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -78,13 +109,45 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export const ConversionTrendCharts = () => {
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('30d');
+  const [period, setPeriod] = useState('7d');
   const [data, setData] = useState<MetricData[]>([]);
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['signups', 'purchases']);
+  const [showComparison, setShowComparison] = useState(true);
 
-  const generateHistoricalData = (days: number): MetricData[] => {
+  const generateHistoricalData = (days: number, includePrevious: boolean): MetricData[] => {
     const result: MetricData[] = [];
     const baseDate = new Date();
+
+    // Generate previous period data first (for comparison)
+    const previousPeriodData: MetricData[] = [];
+    if (includePrevious) {
+      for (let i = days * 2 - 1; i >= days; i--) {
+        const date = new Date(baseDate);
+        date.setDate(date.getDate() - i);
+        
+        const growthFactor = 1 + (days * 2 - i) / (days * 2) * 0.25;
+        const weekendFactor = [0, 6].includes(date.getDay()) ? 0.7 : 1;
+        const seasonalFactor = 1 + Math.sin(i / 7 * Math.PI) * 0.1;
+        
+        const baseSignups = Math.floor(70 * growthFactor * weekendFactor * seasonalFactor + Math.random() * 25);
+        const baseApiKeys = Math.floor(baseSignups * 0.55 + Math.random() * 15);
+        const baseCheckouts = Math.floor(baseApiKeys * 0.22 + Math.random() * 8);
+        const basePurchases = Math.floor(baseCheckouts * 0.65 + Math.random() * 4);
+        const visitors = Math.floor(1400 * weekendFactor + Math.random() * 400);
+        
+        previousPeriodData.push({
+          date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+          signups: baseSignups,
+          apiKeys: baseApiKeys,
+          checkouts: baseCheckouts,
+          purchases: basePurchases,
+          signupRate: Number(((baseSignups / visitors) * 100).toFixed(2)),
+          apiKeyRate: Number(((baseApiKeys / baseSignups) * 100).toFixed(2)),
+          checkoutRate: Number(((baseCheckouts / baseApiKeys) * 100).toFixed(2)),
+          purchaseRate: Number(((basePurchases / baseCheckouts) * 100).toFixed(2)),
+        });
+      }
+    }
 
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date(baseDate);
@@ -102,6 +165,8 @@ export const ConversionTrendCharts = () => {
       
       const visitors = Math.floor(1500 * weekendFactor + Math.random() * 500);
       
+      const prevData = previousPeriodData[days - 1 - i];
+      
       result.push({
         date: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
         signups: baseSignups,
@@ -112,6 +177,11 @@ export const ConversionTrendCharts = () => {
         apiKeyRate: Number(((baseApiKeys / baseSignups) * 100).toFixed(2)),
         checkoutRate: Number(((baseCheckouts / baseApiKeys) * 100).toFixed(2)),
         purchaseRate: Number(((basePurchases / baseCheckouts) * 100).toFixed(2)),
+        // Previous period data
+        prevSignups: prevData?.signups,
+        prevApiKeys: prevData?.apiKeys,
+        prevCheckouts: prevData?.checkouts,
+        prevPurchases: prevData?.purchases,
       });
     }
 
@@ -122,37 +192,40 @@ export const ConversionTrendCharts = () => {
     setLoading(true);
     const days = parseInt(period.replace('d', ''));
     setTimeout(() => {
-      setData(generateHistoricalData(days));
+      setData(generateHistoricalData(days, showComparison));
       setLoading(false);
     }, 500);
   };
 
   useEffect(() => {
     loadData();
-  }, [period]);
+  }, [period, showComparison]);
 
   const stats = useMemo(() => {
     if (data.length < 2) return null;
 
-    const calculateTrend = (key: keyof MetricData) => {
-      const recent = data.slice(-7).reduce((sum, d) => sum + (d[key] as number), 0);
-      const previous = data.slice(-14, -7).reduce((sum, d) => sum + (d[key] as number), 0);
+    const calculateTrend = (key: keyof MetricData, prevKey?: keyof MetricData) => {
+      const recent = data.reduce((sum, d) => sum + ((d[key] as number) || 0), 0);
+      const previous = prevKey 
+        ? data.reduce((sum, d) => sum + ((d[prevKey] as number) || 0), 0)
+        : data.slice(0, Math.floor(data.length / 2)).reduce((sum, d) => sum + ((d[key] as number) || 0), 0) * 2;
       const change = previous > 0 ? ((recent - previous) / previous) * 100 : 0;
       return {
-        total: data.reduce((sum, d) => sum + (d[key] as number), 0),
-        avg: data.reduce((sum, d) => sum + (d[key] as number), 0) / data.length,
+        total: recent,
+        prevTotal: previous,
+        avg: recent / data.length,
         change: Number(change.toFixed(1)),
         trend: change >= 0 ? 'up' : 'down',
       };
     };
 
     return {
-      signups: calculateTrend('signups'),
-      apiKeys: calculateTrend('apiKeys'),
-      checkouts: calculateTrend('checkouts'),
-      purchases: calculateTrend('purchases'),
+      signups: calculateTrend('signups', showComparison ? 'prevSignups' : undefined),
+      apiKeys: calculateTrend('apiKeys', showComparison ? 'prevApiKeys' : undefined),
+      checkouts: calculateTrend('checkouts', showComparison ? 'prevCheckouts' : undefined),
+      purchases: calculateTrend('purchases', showComparison ? 'prevPurchases' : undefined),
     };
-  }, [data]);
+  }, [data, showComparison]);
 
   const toggleMetric = (metric: string) => {
     setSelectedMetrics(prev => 
@@ -205,26 +278,39 @@ export const ConversionTrendCharts = () => {
           </div>
         </div>
 
-        {/* Metric toggles */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {METRICS.map(metric => (
-            <Badge
-              key={metric.key}
-              variant={selectedMetrics.includes(metric.key) ? 'default' : 'outline'}
-              className="cursor-pointer transition-all hover:scale-105"
-              style={{
-                backgroundColor: selectedMetrics.includes(metric.key) ? metric.color : 'transparent',
-                borderColor: metric.color,
-                color: selectedMetrics.includes(metric.key) ? 'white' : metric.color,
-              }}
-              onClick={() => toggleMetric(metric.key)}
-            >
-              {metric.name}
-            </Badge>
-          ))}
+        {/* Metric toggles and comparison toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="flex flex-wrap gap-2">
+            {METRICS.map(metric => (
+              <Badge
+                key={metric.key}
+                variant={selectedMetrics.includes(metric.key) ? 'default' : 'outline'}
+                className="cursor-pointer transition-all hover:scale-105"
+                style={{
+                  backgroundColor: selectedMetrics.includes(metric.key) ? metric.color : 'transparent',
+                  borderColor: metric.color,
+                  color: selectedMetrics.includes(metric.key) ? 'white' : metric.color,
+                }}
+                onClick={() => toggleMetric(metric.key)}
+              >
+                {metric.name}
+              </Badge>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <GitCompare className="w-4 h-4 text-muted-foreground" />
+            <Label htmlFor="comparison-toggle" className="text-sm text-muted-foreground cursor-pointer">
+              Comparar com período anterior
+            </Label>
+            <Switch
+              id="comparison-toggle"
+              checked={showComparison}
+              onCheckedChange={setShowComparison}
+            />
+          </div>
         </div>
 
-        {/* Stats cards */}
+        {/* Stats cards with comparison */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {METRICS.map(metric => {
@@ -248,9 +334,20 @@ export const ConversionTrendCharts = () => {
                   <div className="text-xl font-bold" style={{ color: metric.color }}>
                     {stat.total.toLocaleString()}
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    Média: {stat.avg.toFixed(0)}/dia
-                  </div>
+                  {showComparison && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span>vs</span>
+                      <span className="font-medium">{stat.prevTotal.toLocaleString()}</span>
+                      <span className={stat.change >= 0 ? 'text-green-500' : 'text-red-500'}>
+                        ({stat.change >= 0 ? '+' : ''}{stat.change}%)
+                      </span>
+                    </div>
+                  )}
+                  {!showComparison && (
+                    <div className="text-xs text-muted-foreground">
+                      Média: {stat.avg.toFixed(0)}/dia
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -282,7 +379,7 @@ export const ConversionTrendCharts = () => {
                 tickLine={false}
                 axisLine={false}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip showComparison={showComparison} />} />
               <Legend />
               {METRICS.filter(m => selectedMetrics.includes(m.key)).map(metric => (
                 <Area
@@ -294,6 +391,20 @@ export const ConversionTrendCharts = () => {
                   fillOpacity={1}
                   fill={`url(#gradient-${metric.key})`}
                   strokeWidth={2}
+                />
+              ))}
+              {/* Previous period lines for comparison */}
+              {showComparison && METRICS.filter(m => selectedMetrics.includes(m.key)).map(metric => (
+                <Line
+                  key={`prev-${metric.key}`}
+                  type="monotone"
+                  dataKey={`prev${metric.key.charAt(0).toUpperCase() + metric.key.slice(1)}`}
+                  name={`${metric.name} (anterior)`}
+                  stroke={metric.color}
+                  strokeWidth={1.5}
+                  strokeDasharray="5 5"
+                  opacity={0.5}
+                  dot={false}
                 />
               ))}
             </AreaChart>

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { RECOMMENDED_CONVERSIONS } from "@/lib/analytics";
 
 export interface ConversionThreshold {
   eventName: string;
-  minRate: number; // Minimum conversion rate (0-100)
-  minCount: number; // Minimum event count per period
+  minRate: number;
+  minCount: number;
   period: "hour" | "day" | "week";
   enabled: boolean;
 }
@@ -30,6 +31,13 @@ export interface ConversionAlert {
   acknowledged: boolean;
 }
 
+export interface NotificationSettings {
+  enabled: boolean;
+  type: "email" | "slack";
+  recipient: string;
+  onlyCritical: boolean;
+}
+
 const DEFAULT_THRESHOLDS: ConversionThreshold[] = [
   { eventName: "signup_completed", minRate: 5, minCount: 10, period: "day", enabled: true },
   { eventName: "api_key_generated", minRate: 20, minCount: 5, period: "day", enabled: true },
@@ -40,12 +48,59 @@ const DEFAULT_THRESHOLDS: ConversionThreshold[] = [
 const STORAGE_KEY = "xpex_conversion_thresholds";
 const ALERTS_KEY = "xpex_conversion_alerts";
 const METRICS_KEY = "xpex_conversion_metrics";
+const NOTIFICATION_KEY = "xpex_alert_notifications";
 
 export const useConversionAlerts = () => {
   const [thresholds, setThresholds] = useState<ConversionThreshold[]>([]);
   const [alerts, setAlerts] = useState<ConversionAlert[]>([]);
   const [metrics, setMetrics] = useState<ConversionMetric[]>([]);
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
+    enabled: false,
+    type: "email",
+    recipient: "",
+    onlyCritical: true,
+  });
+
+  // Load notification settings
+  useEffect(() => {
+    const stored = localStorage.getItem(NOTIFICATION_KEY);
+    if (stored) {
+      try {
+        setNotificationSettings(JSON.parse(stored));
+      } catch {}
+    }
+  }, []);
+
+  const saveNotificationSettings = useCallback((settings: NotificationSettings) => {
+    setNotificationSettings(settings);
+    localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(settings));
+  }, []);
+
+  const sendNotification = useCallback(async (alert: ConversionAlert) => {
+    if (!notificationSettings.enabled || !notificationSettings.recipient) return;
+    if (notificationSettings.onlyCritical && alert.severity !== "critical") return;
+
+    try {
+      await supabase.functions.invoke("send-conversion-alert", {
+        body: {
+          type: notificationSettings.type,
+          recipient: notificationSettings.recipient,
+          alert: {
+            eventName: alert.eventName,
+            message: alert.message,
+            severity: alert.severity,
+            currentValue: alert.currentValue,
+            threshold: alert.threshold,
+            createdAt: alert.createdAt,
+          },
+        },
+      });
+      console.log("Alert notification sent:", alert.eventName);
+    } catch (error) {
+      console.error("Failed to send notification:", error);
+    }
+  }, [notificationSettings]);
 
   // Load thresholds from localStorage
   useEffect(() => {

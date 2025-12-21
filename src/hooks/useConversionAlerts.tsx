@@ -38,6 +38,18 @@ export interface NotificationSettings {
   onlyCritical: boolean;
 }
 
+export interface NotificationRecord {
+  id: string;
+  type: "email" | "slack";
+  recipient: string;
+  alertMessage: string;
+  severity: "warning" | "critical";
+  status: "pending" | "sent" | "failed";
+  sentAt: string;
+  deliveredAt?: string;
+  errorMessage?: string;
+}
+
 const DEFAULT_THRESHOLDS: ConversionThreshold[] = [
   { eventName: "signup_completed", minRate: 5, minCount: 10, period: "day", enabled: true },
   { eventName: "api_key_generated", minRate: 20, minCount: 5, period: "day", enabled: true },
@@ -49,6 +61,7 @@ const STORAGE_KEY = "xpex_conversion_thresholds";
 const ALERTS_KEY = "xpex_conversion_alerts";
 const METRICS_KEY = "xpex_conversion_metrics";
 const NOTIFICATION_KEY = "xpex_alert_notifications";
+const NOTIFICATION_HISTORY_KEY = "xpex_notification_history";
 
 export const useConversionAlerts = () => {
   const [thresholds, setThresholds] = useState<ConversionThreshold[]>([]);
@@ -61,6 +74,7 @@ export const useConversionAlerts = () => {
     recipient: "",
     onlyCritical: true,
   });
+  const [notificationHistory, setNotificationHistory] = useState<NotificationRecord[]>([]);
 
   // Load notification settings
   useEffect(() => {
@@ -70,6 +84,13 @@ export const useConversionAlerts = () => {
         setNotificationSettings(JSON.parse(stored));
       } catch {}
     }
+    
+    const storedHistory = localStorage.getItem(NOTIFICATION_HISTORY_KEY);
+    if (storedHistory) {
+      try {
+        setNotificationHistory(JSON.parse(storedHistory));
+      } catch {}
+    }
   }, []);
 
   const saveNotificationSettings = useCallback((settings: NotificationSettings) => {
@@ -77,12 +98,47 @@ export const useConversionAlerts = () => {
     localStorage.setItem(NOTIFICATION_KEY, JSON.stringify(settings));
   }, []);
 
+  const addNotificationRecord = useCallback((record: Omit<NotificationRecord, "id">) => {
+    const newRecord: NotificationRecord = {
+      ...record,
+      id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    };
+    setNotificationHistory(prev => {
+      const updated = [newRecord, ...prev].slice(0, 100);
+      localStorage.setItem(NOTIFICATION_HISTORY_KEY, JSON.stringify(updated));
+      return updated;
+    });
+    return newRecord;
+  }, []);
+
+  const updateNotificationRecord = useCallback((id: string, updates: Partial<NotificationRecord>) => {
+    setNotificationHistory(prev => {
+      const updated = prev.map(r => r.id === id ? { ...r, ...updates } : r);
+      localStorage.setItem(NOTIFICATION_HISTORY_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const clearNotificationHistory = useCallback(() => {
+    setNotificationHistory([]);
+    localStorage.removeItem(NOTIFICATION_HISTORY_KEY);
+  }, []);
+
   const sendNotification = useCallback(async (alert: ConversionAlert) => {
     if (!notificationSettings.enabled || !notificationSettings.recipient) return;
     if (notificationSettings.onlyCritical && alert.severity !== "critical") return;
 
+    const record = addNotificationRecord({
+      type: notificationSettings.type,
+      recipient: notificationSettings.recipient,
+      alertMessage: alert.message,
+      severity: alert.severity,
+      status: "pending",
+      sentAt: new Date().toISOString(),
+    });
+
     try {
-      await supabase.functions.invoke("send-conversion-alert", {
+      const response = await supabase.functions.invoke("send-conversion-alert", {
         body: {
           type: notificationSettings.type,
           recipient: notificationSettings.recipient,
@@ -96,11 +152,27 @@ export const useConversionAlerts = () => {
           },
         },
       });
+
+      if (response.error) {
+        updateNotificationRecord(record.id, {
+          status: "failed",
+          errorMessage: response.error.message,
+        });
+      } else {
+        updateNotificationRecord(record.id, {
+          status: "sent",
+          deliveredAt: new Date().toISOString(),
+        });
+      }
       console.log("Alert notification sent:", alert.eventName);
-    } catch (error) {
+    } catch (error: any) {
+      updateNotificationRecord(record.id, {
+        status: "failed",
+        errorMessage: error.message || "Erro desconhecido",
+      });
       console.error("Failed to send notification:", error);
     }
-  }, [notificationSettings]);
+  }, [notificationSettings, addNotificationRecord, updateNotificationRecord]);
 
   // Load thresholds from localStorage
   useEffect(() => {
@@ -350,6 +422,8 @@ export const useConversionAlerts = () => {
     alerts,
     metrics,
     isMonitoring,
+    notificationSettings,
+    notificationHistory,
     updateThreshold,
     addThreshold,
     removeThreshold,
@@ -360,5 +434,8 @@ export const useConversionAlerts = () => {
     startMonitoring,
     stopMonitoring,
     resetToDefaults: () => saveThresholds(DEFAULT_THRESHOLDS),
+    saveNotificationSettings,
+    sendNotification,
+    clearNotificationHistory,
   };
 };

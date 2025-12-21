@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { 
   AlertTriangle, 
   Bell, 
@@ -21,10 +22,18 @@ import {
   RefreshCw,
   Play,
   Pause,
-  AlertCircle
+  AlertCircle,
+  Mail,
+  MessageSquare,
+  History,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Send,
 } from "lucide-react";
-import { useConversionAlerts, ConversionThreshold } from "@/hooks/useConversionAlerts";
+import { useConversionAlerts, ConversionThreshold, NotificationRecord } from "@/hooks/useConversionAlerts";
 import { RECOMMENDED_CONVERSIONS } from "@/lib/analytics";
+import { toast } from "@/hooks/use-toast";
 
 const ConversionAlerts = () => {
   const {
@@ -32,6 +41,8 @@ const ConversionAlerts = () => {
     alerts,
     metrics,
     isMonitoring,
+    notificationSettings,
+    notificationHistory,
     updateThreshold,
     addThreshold,
     checkThresholds,
@@ -41,9 +52,17 @@ const ConversionAlerts = () => {
     startMonitoring,
     stopMonitoring,
     resetToDefaults,
+    saveNotificationSettings,
+    clearNotificationHistory,
   } = useConversionAlerts();
 
   const [newEventName, setNewEventName] = useState("");
+  const [editingNotifications, setEditingNotifications] = useState(notificationSettings);
+
+  // Sync local state with hook state
+  useEffect(() => {
+    setEditingNotifications(notificationSettings);
+  }, [notificationSettings]);
 
   const unacknowledgedCount = alerts.filter(a => !a.acknowledged).length;
   const criticalCount = alerts.filter(a => a.severity === "critical" && !a.acknowledged).length;
@@ -71,6 +90,46 @@ const ConversionAlerts = () => {
       });
       setNewEventName("");
     }
+  };
+
+  const handleSaveNotificationSettings = () => {
+    saveNotificationSettings(editingNotifications);
+    toast({
+      title: "Configurações salvas",
+      description: "As configurações de notificação foram atualizadas.",
+    });
+  };
+
+  const getStatusIcon = (status: NotificationRecord["status"]) => {
+    switch (status) {
+      case "sent":
+        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case "failed":
+        return <XCircle className="h-4 w-4 text-destructive" />;
+      default:
+        return <Clock className="h-4 w-4 text-muted-foreground animate-pulse" />;
+    }
+  };
+
+  const getStatusBadge = (status: NotificationRecord["status"]) => {
+    switch (status) {
+      case "sent":
+        return <Badge variant="secondary" className="bg-green-500/10 text-green-500 border-green-500/20">Enviado</Badge>;
+      case "failed":
+        return <Badge variant="destructive">Falhou</Badge>;
+      default:
+        return <Badge variant="outline">Pendente</Badge>;
+    }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   // Auto-start monitoring on mount
@@ -128,7 +187,7 @@ const ConversionAlerts = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="alerts">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="alerts" className="relative">
               Alertas
               {criticalCount > 0 && (
@@ -138,6 +197,10 @@ const ConversionAlerts = () => {
               )}
             </TabsTrigger>
             <TabsTrigger value="metrics">Métricas</TabsTrigger>
+            <TabsTrigger value="notifications">
+              <Send className="h-4 w-4 mr-1" />
+              Notificações
+            </TabsTrigger>
             <TabsTrigger value="settings">
               <Settings className="h-4 w-4 mr-1" />
               Configurar
@@ -268,6 +331,184 @@ const ConversionAlerts = () => {
                   );
                 })
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="notifications" className="mt-4">
+            <div className="space-y-6">
+              {/* Notification Settings */}
+              <div className="space-y-4 p-4 rounded-lg border bg-card">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-primary" />
+                    <Label className="font-medium">Configurar Notificações</Label>
+                  </div>
+                  <Switch
+                    checked={editingNotifications.enabled}
+                    onCheckedChange={(enabled) => 
+                      setEditingNotifications(prev => ({ ...prev, enabled }))
+                    }
+                  />
+                </div>
+
+                {editingNotifications.enabled && (
+                  <>
+                    <Separator />
+                    
+                    <div className="grid gap-4">
+                      <div>
+                        <Label className="text-sm text-muted-foreground">Tipo de Notificação</Label>
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            variant={editingNotifications.type === "email" ? "default" : "outline"}
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => setEditingNotifications(prev => ({ ...prev, type: "email" }))}
+                          >
+                            <Mail className="h-4 w-4 mr-2" />
+                            Email
+                          </Button>
+                          <Button
+                            variant={editingNotifications.type === "slack" ? "default" : "outline"}
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => setEditingNotifications(prev => ({ ...prev, type: "slack" }))}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Slack
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm text-muted-foreground">
+                          {editingNotifications.type === "email" ? "Email do destinatário" : "URL do Webhook Slack"}
+                        </Label>
+                        <Input
+                          type={editingNotifications.type === "email" ? "email" : "url"}
+                          placeholder={editingNotifications.type === "email" 
+                            ? "admin@empresa.com" 
+                            : "https://hooks.slack.com/services/..."}
+                          value={editingNotifications.recipient}
+                          onChange={(e) => setEditingNotifications(prev => ({ 
+                            ...prev, 
+                            recipient: e.target.value 
+                          }))}
+                          className="mt-1"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-sm">Apenas alertas críticos</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Ignora alertas de aviso, notifica apenas críticos
+                          </p>
+                        </div>
+                        <Switch
+                          checked={editingNotifications.onlyCritical}
+                          onCheckedChange={(onlyCritical) => 
+                            setEditingNotifications(prev => ({ ...prev, onlyCritical }))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={handleSaveNotificationSettings} 
+                      className="w-full"
+                      disabled={!editingNotifications.recipient}
+                    >
+                      Salvar Configurações
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              {/* Notification History */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <History className="h-5 w-5" />
+                    <Label className="font-medium">Histórico de Notificações</Label>
+                  </div>
+                  {notificationHistory.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={clearNotificationHistory}>
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Limpar
+                    </Button>
+                  )}
+                </div>
+
+                {notificationHistory.length === 0 ? (
+                  <div className="text-center py-6 text-muted-foreground border rounded-lg">
+                    <History className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nenhuma notificação enviada</p>
+                  </div>
+                ) : (
+                  <ScrollArea className="h-[200px]">
+                    <div className="space-y-2 pr-4">
+                      {notificationHistory.map((record) => (
+                        <div
+                          key={record.id}
+                          className="p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2">
+                              {record.type === "email" ? (
+                                <Mail className="h-4 w-4 text-primary mt-0.5" />
+                              ) : (
+                                <MessageSquare className="h-4 w-4 text-[#4A154B] mt-0.5" />
+                              )}
+                              <div>
+                                <p className="text-sm line-clamp-1">{record.alertMessage}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                  <span>{record.recipient}</span>
+                                  <span>•</span>
+                                  <span>{formatTimestamp(record.sentAt)}</span>
+                                </div>
+                                {record.errorMessage && (
+                                  <p className="text-xs text-destructive mt-1">
+                                    {record.errorMessage}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {getStatusIcon(record.status)}
+                              {getStatusBadge(record.status)}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+
+                {/* Summary */}
+                {notificationHistory.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3 pt-3 border-t">
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-primary">
+                        {notificationHistory.length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Total</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-green-500">
+                        {notificationHistory.filter(h => h.status === "sent").length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Enviados</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-destructive">
+                        {notificationHistory.filter(h => h.status === "failed").length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">Falharam</div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
 

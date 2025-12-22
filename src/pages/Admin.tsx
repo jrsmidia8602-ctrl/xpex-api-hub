@@ -24,6 +24,8 @@ import RealtimeEventsDashboard from "@/components/admin/RealtimeEventsDashboard"
 import ConversionAlerts from "@/components/admin/ConversionAlerts";
 import { ConversionFunnel } from "@/components/admin/ConversionFunnel";
 import { ConversionTrendCharts } from "@/components/admin/ConversionTrendCharts";
+import { ExecutiveSummary } from "@/components/admin/ExecutiveSummary";
+import { ConversionExport } from "@/components/admin/ConversionExport";
 
 const statsData = [
   { label: "Total Users", value: "2,847", change: "+12%", icon: Users },

@@ -30,10 +30,12 @@ import {
   XCircle,
   Clock,
   Send,
+  TestTube2,
 } from "lucide-react";
 import { useConversionAlerts, ConversionThreshold, NotificationRecord } from "@/hooks/useConversionAlerts";
 import { RECOMMENDED_CONVERSIONS } from "@/lib/analytics";
 import { toast } from "@/hooks/use-toast";
+import { NotificationTest } from "./NotificationTest";
 
 const ConversionAlerts = () => {
   const {
@@ -509,6 +511,9 @@ const ConversionAlerts = () => {
                   </div>
                 )}
               </div>
+
+              {/* Test Notifications */}
+              <NotificationTest notificationSettings={notificationSettings} />
             </div>
           </TabsContent>
 

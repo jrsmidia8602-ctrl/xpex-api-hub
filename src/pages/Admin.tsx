@@ -26,6 +26,8 @@ import { ConversionFunnel } from "@/components/admin/ConversionFunnel";
 import { ConversionTrendCharts } from "@/components/admin/ConversionTrendCharts";
 import { ExecutiveSummary } from "@/components/admin/ExecutiveSummary";
 import { ConversionExport } from "@/components/admin/ConversionExport";
+import { AdminSkeleton } from "@/components/admin/AdminSkeleton";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const statsData = [
   { label: "Total Users", value: "2,847", change: "+12%", icon: Users },
@@ -54,11 +56,7 @@ const Admin = () => {
   const [activeTab, setActiveTab] = useState("overview");
 
   if (loading || adminLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-primary">Verificando acesso...</div>
-      </div>
-    );
+    return <AdminSkeleton />;
   }
 
   if (!user) {
@@ -87,7 +85,11 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <ErrorBoundary
+      fallbackTitle="Erro no Admin"
+      fallbackDescription="Ocorreu um erro ao carregar o painel de administração. Por favor, recarregue a página."
+    >
+    <div className="min-h-screen bg-background animate-fade-in">
       <Helmet>
         <title>Admin Dashboard - XPEX Neural</title>
         <meta name="description" content="XPEX Neural Admin Dashboard - Monitor users, API usage, and system health." />
@@ -235,6 +237,7 @@ const Admin = () => {
         </Tabs>
       </main>
     </div>
+    </ErrorBoundary>
   );
 };
 

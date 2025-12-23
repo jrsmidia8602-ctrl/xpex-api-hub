@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Zap, Mail, Lock, User, ArrowLeft } from "lucide-react";
 import { z } from "zod";
+import { AuthSkeleton } from "@/components/AuthSkeleton";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const emailSchema = z.string().email("Email inválido");
 const passwordSchema = z.string().min(6, "Senha deve ter no mínimo 6 caracteres");
@@ -70,15 +72,15 @@ const Auth = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-neon-cyan">Carregando...</div>
-      </div>
-    );
+    return <AuthSkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center relative">
+    <ErrorBoundary
+      fallbackTitle="Erro na Autenticação"
+      fallbackDescription="Ocorreu um erro ao carregar a página de autenticação. Por favor, recarregue."
+    >
+    <div className="min-h-screen bg-background flex items-center justify-center relative animate-fade-in">
       {/* Background Effects */}
       <div className="fixed inset-0 bg-grid-pattern opacity-5 pointer-events-none" />
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-neon-purple/10 rounded-full blur-[120px] pointer-events-none" />
@@ -196,6 +198,7 @@ const Auth = () => {
         </div>
       </div>
     </div>
+    </ErrorBoundary>
   );
 };
 

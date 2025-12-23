@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import { PageTransition } from "@/components/PageTransition";
 
 const plans = [
   {
@@ -66,6 +67,7 @@ const creditPackages = [
 
 const Pricing = () => {
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background">
       <Helmet>
         <title>Pricing - XPEX Neural | API Plans & Credits</title>
@@ -162,6 +164,7 @@ const Pricing = () => {
 
       <Footer />
     </div>
+    </PageTransition>
   );
 };
 

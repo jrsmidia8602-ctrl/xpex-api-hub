@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { withRetry } from '@/lib/retry';
 
 export interface SubscriptionStatus {
   subscribed: boolean;
@@ -16,50 +17,77 @@ export const STRIPE_PRICES = {
   enterprise: 'price_1SdigPHDcsx7lyoo9ciVaLVQ'
 } as const;
 
+const DEFAULT_SUBSCRIPTION: SubscriptionStatus = {
+  subscribed: false,
+  tier: 'free',
+  subscriptionEnd: null,
+  monthlyCredits: 100
+};
+
 export const useSubscription = () => {
-  const [subscription, setSubscription] = useState<SubscriptionStatus>({
-    subscribed: false,
-    tier: 'free',
-    subscriptionEnd: null,
-    monthlyCredits: 100
-  });
+  const [subscription, setSubscription] = useState<SubscriptionStatus>(DEFAULT_SUBSCRIPTION);
   const [loading, setLoading] = useState(true);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const { user, session } = useAuth();
+  const mountedRef = useRef(true);
 
   const checkSubscription = useCallback(async () => {
     // Get fresh session to ensure token is not expired
     const { data: { session: freshSession } } = await supabase.auth.getSession();
     
     if (!freshSession?.access_token) {
-      setSubscription({
-        subscribed: false,
-        tier: 'free',
-        subscriptionEnd: null,
-        monthlyCredits: 100
-      });
+      setSubscription(DEFAULT_SUBSCRIPTION);
       setLoading(false);
       return;
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('check-subscription', {
-        headers: {
-          Authorization: `Bearer ${freshSession.access_token}`
+      const data = await withRetry(
+        async () => {
+          const { data, error } = await supabase.functions.invoke('check-subscription', {
+            headers: {
+              Authorization: `Bearer ${freshSession.access_token}`
+            }
+          });
+
+          if (error) throw error;
+          return data;
+        },
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          maxDelay: 10000,
+          onRetry: (error, attempt, delay) => {
+            if (mountedRef.current) {
+              setIsRetrying(true);
+              setRetryCount(attempt);
+              console.log(`Retry attempt ${attempt} for subscription check after ${Math.round(delay)}ms`);
+            }
+          },
         }
-      });
+      );
 
-      if (error) throw error;
-
-      setSubscription({
-        subscribed: data.subscribed,
-        tier: data.tier || 'free',
-        subscriptionEnd: data.subscription_end,
-        monthlyCredits: data.monthly_credits || 100
-      });
+      if (mountedRef.current) {
+        setSubscription({
+          subscribed: data.subscribed,
+          tier: data.tier || 'free',
+          subscriptionEnd: data.subscription_end,
+          monthlyCredits: data.monthly_credits || 100
+        });
+        setIsRetrying(false);
+        setRetryCount(0);
+      }
     } catch (error) {
       console.error('Error checking subscription:', error);
+      if (mountedRef.current) {
+        setIsRetrying(false);
+        setRetryCount(0);
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [user]);
 
@@ -84,6 +112,14 @@ export const useSubscription = () => {
     const interval = setInterval(checkSubscription, 60000);
     return () => clearInterval(interval);
   }, [user, checkSubscription]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const startCheckout = async (tier: 'pro' | 'enterprise') => {
     // Get fresh session to ensure token is not expired
@@ -146,6 +182,8 @@ export const useSubscription = () => {
   return {
     subscription,
     loading,
+    isRetrying,
+    retryCount,
     checkSubscription,
     startCheckout,
     openCustomerPortal

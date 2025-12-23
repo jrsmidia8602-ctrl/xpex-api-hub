@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { withRetry } from "@/lib/retry";
 
 export interface ValidationStats {
   total_validations: number;
@@ -17,18 +18,38 @@ export const useValidationStats = (refreshInterval: number = 30000) => {
   const [stats, setStats] = useState<ValidationStats>(DEFAULT_STATS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const fetchStats = useCallback(async () => {
     try {
-      const { data, error: rpcError } = await supabase.rpc('get_validation_stats');
-      
-      if (rpcError) {
-        console.error('Error fetching stats:', rpcError);
-        setError(rpcError.message);
-        return;
-      }
+      const data = await withRetry(
+        async () => {
+          const { data, error: rpcError } = await supabase.rpc('get_validation_stats');
+          
+          if (rpcError) throw rpcError;
+          return data;
+        },
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          onRetry: (error, attempt) => {
+            if (mountedRef.current) {
+              setIsRetrying(true);
+              console.log(`Retry attempt ${attempt} for validation stats`);
+            }
+          },
+        }
+      );
 
-      if (data) {
+      if (mountedRef.current && data) {
         const statsData = data as unknown as ValidationStats;
         setStats({
           total_validations: Math.max(statsData.total_validations || 0, DEFAULT_STATS.total_validations),
@@ -36,12 +57,18 @@ export const useValidationStats = (refreshInterval: number = 30000) => {
           success_rate: statsData.success_rate || DEFAULT_STATS.success_rate,
         });
         setError(null);
+        setIsRetrying(false);
       }
     } catch (err) {
       console.log('Using default stats');
-      setError('Failed to fetch stats');
+      if (mountedRef.current) {
+        setError('Failed to fetch stats');
+        setIsRetrying(false);
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -54,7 +81,7 @@ export const useValidationStats = (refreshInterval: number = 30000) => {
     }
   }, [fetchStats, refreshInterval]);
 
-  return { stats, loading, error, refresh: fetchStats };
+  return { stats, loading, error, isRetrying, refresh: fetchStats };
 };
 
 export default useValidationStats;

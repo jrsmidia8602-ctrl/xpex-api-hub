@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { withRetry } from '@/lib/retry';
+import { offlineStorage } from '@/lib/offlineStorage';
 
 export interface UsageLog {
   id: string;
@@ -19,34 +21,35 @@ export interface UsageStats {
   callsByEndpoint: { endpoint: string; count: number }[];
 }
 
+const CACHE_KEY = 'usage_logs';
+
 export const useUsageLogs = () => {
   const [logs, setLogs] = useState<UsageLog[]>([]);
   const [stats, setStats] = useState<UsageStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const { user } = useAuth();
+  const mountedRef = useRef(true);
 
-  const fetchLogs = async () => {
-    if (!user) {
-      setLogs([]);
-      setStats(null);
-      setLoading(false);
-      return;
-    }
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
-    const { data, error } = await supabase
-      .from('usage_logs')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(100);
-
-    if (error) {
-      console.error('Error fetching usage logs:', error);
-    } else {
-      setLogs(data || []);
-      calculateStats(data || []);
-    }
-    setLoading(false);
-  };
+  useEffect(() => {
+    const unsubscribe = offlineStorage.onConnectionChange((online) => {
+      if (mountedRef.current) {
+        setIsOffline(!online);
+        if (online) {
+          fetchLogs();
+        }
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   const calculateStats = (logsData: UsageLog[]) => {
     if (logsData.length === 0) {
@@ -100,6 +103,70 @@ export const useUsageLogs = () => {
     });
   };
 
+  const fetchLogs = async () => {
+    if (!user) {
+      setLogs([]);
+      setStats(null);
+      setLoading(false);
+      return;
+    }
+
+    // Try to load from cache first
+    const cached = offlineStorage.getCache<UsageLog[]>(CACHE_KEY);
+    if (cached && !navigator.onLine) {
+      setLogs(cached);
+      calculateStats(cached);
+      setIsOffline(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const data = await withRetry(
+        async () => {
+          const { data, error } = await supabase
+            .from('usage_logs')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+          if (error) throw error;
+          return data;
+        },
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          onRetry: (error, attempt) => {
+            if (mountedRef.current) {
+              setIsRetrying(true);
+              console.log(`Retry attempt ${attempt} for usage logs fetch`);
+            }
+          },
+        }
+      );
+
+      if (mountedRef.current) {
+        setLogs(data || []);
+        calculateStats(data || []);
+        setIsRetrying(false);
+        offlineStorage.setCache(CACHE_KEY, data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching usage logs:', error);
+      if (mountedRef.current) {
+        setIsRetrying(false);
+        if (cached) {
+          setLogs(cached);
+          calculateStats(cached);
+        }
+      }
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+    }
+  };
+
   useEffect(() => {
     fetchLogs();
   }, [user]);
@@ -119,8 +186,10 @@ export const useUsageLogs = () => {
         },
         (payload) => {
           const newLog = payload.new as UsageLog;
-          setLogs(prev => [newLog, ...prev.slice(0, 99)]);
-          calculateStats([newLog, ...logs.slice(0, 99)]);
+          const updatedLogs = [newLog, ...logs.slice(0, 99)];
+          setLogs(updatedLogs);
+          calculateStats(updatedLogs);
+          offlineStorage.setCache(CACHE_KEY, updatedLogs);
         }
       )
       .subscribe();
@@ -134,6 +203,8 @@ export const useUsageLogs = () => {
     logs,
     stats,
     loading,
+    isRetrying,
+    isOffline,
     refetch: fetchLogs
   };
 };

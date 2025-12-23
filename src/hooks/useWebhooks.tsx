@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { withRetry } from '@/lib/retry';
+import { offlineStorage } from '@/lib/offlineStorage';
 
 // Auto-backup helper
 const triggerAutoBackup = async (userId: string) => {
@@ -49,11 +51,36 @@ export const WEBHOOK_EVENTS = [
   { value: 'subscription.changed', label: 'Assinatura alterada' }
 ];
 
+const CACHE_KEY_WEBHOOKS = 'webhooks';
+const CACHE_KEY_WEBHOOK_LOGS = 'webhook_logs';
+
 export const useWebhooks = () => {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [logs, setLogs] = useState<WebhookLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const { user } = useAuth();
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = offlineStorage.onConnectionChange((online) => {
+      if (mountedRef.current) {
+        setIsOffline(!online);
+        if (online) {
+          fetchWebhooks();
+        }
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   const fetchWebhooks = async () => {
     if (!user) {
@@ -63,35 +90,73 @@ export const useWebhooks = () => {
       return;
     }
 
+    // Try to load from cache first
+    const cachedWebhooks = offlineStorage.getCache<Webhook[]>(CACHE_KEY_WEBHOOKS);
+    const cachedLogs = offlineStorage.getCache<WebhookLog[]>(CACHE_KEY_WEBHOOK_LOGS);
+    
+    if (cachedWebhooks && !navigator.onLine) {
+      setWebhooks(cachedWebhooks);
+      setLogs(cachedLogs || []);
+      setIsOffline(true);
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { data, error } = await supabase
-        .from('webhooks')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const data = await withRetry(
+        async () => {
+          const { data, error } = await supabase
+            .from('webhooks')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching webhooks:', error);
-        return;
-      }
+          if (error) throw error;
+          return data;
+        },
+        {
+          maxRetries: 3,
+          initialDelay: 1000,
+          onRetry: (error, attempt) => {
+            if (mountedRef.current) {
+              setIsRetrying(true);
+              console.log(`Retry attempt ${attempt} for webhooks fetch`);
+            }
+          },
+        }
+      );
 
-      setWebhooks((data || []) as Webhook[]);
+      if (mountedRef.current) {
+        setWebhooks((data || []) as Webhook[]);
+        setIsRetrying(false);
+        offlineStorage.setCache(CACHE_KEY_WEBHOOKS, data || []);
 
-      // Fetch recent logs for all webhooks
-      if (data && data.length > 0) {
-        const webhookIds = data.map(w => w.id);
-        const { data: logsData } = await supabase
-          .from('webhook_logs')
-          .select('*')
-          .in('webhook_id', webhookIds)
-          .order('created_at', { ascending: false })
-          .limit(50);
+        // Fetch recent logs for all webhooks
+        if (data && data.length > 0) {
+          const webhookIds = data.map(w => w.id);
+          const { data: logsData } = await supabase
+            .from('webhook_logs')
+            .select('*')
+            .in('webhook_id', webhookIds)
+            .order('created_at', { ascending: false })
+            .limit(50);
 
-        setLogs((logsData || []) as WebhookLog[]);
+          setLogs((logsData || []) as WebhookLog[]);
+          offlineStorage.setCache(CACHE_KEY_WEBHOOK_LOGS, logsData || []);
+        }
       }
     } catch (error) {
       console.error('Error in fetchWebhooks:', error);
+      if (mountedRef.current) {
+        setIsRetrying(false);
+        if (cachedWebhooks) {
+          setWebhooks(cachedWebhooks);
+          setLogs(cachedLogs || []);
+        }
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -102,22 +167,27 @@ export const useWebhooks = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('webhooks')
-        .insert({
-          user_id: user.id,
-          name,
-          url,
-          events
-        })
-        .select()
-        .single();
+      const data = await withRetry(
+        async () => {
+          const { data, error } = await supabase
+            .from('webhooks')
+            .insert({
+              user_id: user.id,
+              name,
+              url,
+              events
+            })
+            .select()
+            .single();
 
-      if (error) {
-        console.error('Error creating webhook:', error);
-        toast.error('Erro ao criar webhook');
-        return null;
-      }
+          if (error) throw error;
+          return data;
+        },
+        {
+          maxRetries: 2,
+          initialDelay: 1000,
+        }
+      );
 
       toast.success('Webhook criado com sucesso!');
       await fetchWebhooks();
@@ -132,16 +202,20 @@ export const useWebhooks = () => {
 
   const updateWebhook = async (id: string, updates: Partial<Pick<Webhook, 'name' | 'url' | 'events' | 'active'>>) => {
     try {
-      const { error } = await supabase
-        .from('webhooks')
-        .update(updates)
-        .eq('id', id);
+      await withRetry(
+        async () => {
+          const { error } = await supabase
+            .from('webhooks')
+            .update(updates)
+            .eq('id', id);
 
-      if (error) {
-        console.error('Error updating webhook:', error);
-        toast.error('Erro ao atualizar webhook');
-        return false;
-      }
+          if (error) throw error;
+        },
+        {
+          maxRetries: 2,
+          initialDelay: 1000,
+        }
+      );
 
       toast.success('Webhook atualizado!');
       await fetchWebhooks();
@@ -156,16 +230,20 @@ export const useWebhooks = () => {
 
   const deleteWebhook = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('webhooks')
-        .delete()
-        .eq('id', id);
+      await withRetry(
+        async () => {
+          const { error } = await supabase
+            .from('webhooks')
+            .delete()
+            .eq('id', id);
 
-      if (error) {
-        console.error('Error deleting webhook:', error);
-        toast.error('Erro ao deletar webhook');
-        return false;
-      }
+          if (error) throw error;
+        },
+        {
+          maxRetries: 2,
+          initialDelay: 1000,
+        }
+      );
 
       toast.success('Webhook deletado!');
       await fetchWebhooks();
@@ -180,21 +258,26 @@ export const useWebhooks = () => {
 
   const testWebhook = async (id: string) => {
     try {
-      const { error } = await supabase.functions.invoke('send-webhook', {
-        body: {
-          webhook_id: id,
-          event_type: 'test',
-          payload: {
-            message: 'Este é um teste de webhook',
-            timestamp: new Date().toISOString()
-          }
-        }
-      });
+      await withRetry(
+        async () => {
+          const { error } = await supabase.functions.invoke('send-webhook', {
+            body: {
+              webhook_id: id,
+              event_type: 'test',
+              payload: {
+                message: 'Este é um teste de webhook',
+                timestamp: new Date().toISOString()
+              }
+            }
+          });
 
-      if (error) {
-        toast.error('Erro ao testar webhook');
-        return false;
-      }
+          if (error) throw error;
+        },
+        {
+          maxRetries: 2,
+          initialDelay: 1000,
+        }
+      );
 
       toast.success('Webhook de teste enviado!');
       await fetchWebhooks();
@@ -214,6 +297,8 @@ export const useWebhooks = () => {
     webhooks,
     logs,
     loading,
+    isRetrying,
+    isOffline,
     createWebhook,
     updateWebhook,
     deleteWebhook,

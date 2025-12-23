@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAlertThresholds } from '@/hooks/useAlertThresholds';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,12 +15,13 @@ export const AlertThresholdsConfig = () => {
   const [enabled, setEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Sync local state when thresholds load
-  if (thresholds && latencyMs === 1000 && errorRate === 5) {
+  // Sync local state when thresholds load (never setState during render)
+  useEffect(() => {
+    if (!thresholds) return;
     setLatencyMs(thresholds.latency_threshold_ms);
     setErrorRate(thresholds.error_rate_threshold);
     setEnabled(thresholds.enabled);
-  }
+  }, [thresholds?.id, thresholds?.latency_threshold_ms, thresholds?.error_rate_threshold, thresholds?.enabled]);
 
   const handleSave = async () => {
     setSaving(true);

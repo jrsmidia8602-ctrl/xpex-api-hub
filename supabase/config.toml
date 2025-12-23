@@ -59,3 +59,6 @@ verify_jwt = false
 
 [functions.restore-configurations]
 verify_jwt = false
+
+[functions.check-metrics-alerts]
+verify_jwt = false

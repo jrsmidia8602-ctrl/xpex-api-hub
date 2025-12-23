@@ -64,14 +64,26 @@ export const useSubscription = () => {
   }, [user]);
 
   useEffect(() => {
-    checkSubscription();
-  }, [checkSubscription]);
+    // Only check subscription if user is authenticated
+    if (user) {
+      checkSubscription();
+    } else {
+      setSubscription({
+        subscribed: false,
+        tier: 'free',
+        subscriptionEnd: null,
+        monthlyCredits: 100
+      });
+      setLoading(false);
+    }
+  }, [user, checkSubscription]);
 
-  // Refresh every minute
+  // Refresh every minute only when user is authenticated
   useEffect(() => {
+    if (!user) return;
     const interval = setInterval(checkSubscription, 60000);
     return () => clearInterval(interval);
-  }, [checkSubscription]);
+  }, [user, checkSubscription]);
 
   const startCheckout = async (tier: 'pro' | 'enterprise') => {
     // Get fresh session to ensure token is not expired

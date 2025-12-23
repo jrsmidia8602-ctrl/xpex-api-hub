@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { APIAssistant } from "@/components/APIAssistant";
 import { RouteTracker } from "@/components/RouteTracker";
 import { OnboardingTour } from "@/components/OnboardingTour";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
@@ -39,6 +40,10 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <HelmetProvider>
+    <ErrorBoundary 
+      fallbackTitle="Erro na Aplicação" 
+      fallbackDescription="Ocorreu um erro inesperado na aplicação. Por favor, recarregue a página."
+    >
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark" storageKey="xpex-theme">
         <AuthProvider>
@@ -95,6 +100,7 @@ const App = () => (
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   </HelmetProvider>
 );
 

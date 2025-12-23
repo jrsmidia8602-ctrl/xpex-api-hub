@@ -3,6 +3,7 @@ import { Zap, Target, Globe, Users, Code, Rocket } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import { PageTransition } from "@/components/PageTransition";
 
 const values = [
   {
@@ -39,6 +40,7 @@ const milestones = [
 
 const About = () => {
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background">
       <Helmet>
         <title>About - XPEX Neural | Building the Agent Economy</title>
@@ -159,6 +161,7 @@ const About = () => {
 
       <Footer />
     </div>
+    </PageTransition>
   );
 };
 

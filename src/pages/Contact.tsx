@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { analytics } from "@/lib/analytics";
+import { PageTransition } from "@/components/PageTransition";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -78,7 +79,7 @@ const Contact = () => {
   };
 
   return (
-    <>
+    <PageTransition>
       <Helmet>
         <title>Contact Us - XPEX Neural</title>
         <meta
@@ -218,7 +219,7 @@ const Contact = () => {
           </div>
         </main>
       </div>
-    </>
+    </PageTransition>
   );
 };
 

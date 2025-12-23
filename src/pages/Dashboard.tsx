@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { PageTransition } from "@/components/PageTransition";
 import { ArrowLeft, BarChart3, Key, Users, DollarSign, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/admin/StatsCard";
@@ -108,125 +109,163 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {/* Stats Grid */}
+        {/* Stats Grid with staggered animation */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatsCard
-            title="Total de Chamadas"
-            value={totalCalls.toLocaleString()}
-            change={tierLabels[subscription.tier]}
-            changeType={subscription.tier === 'free' ? 'neutral' : 'positive'}
-            icon={BarChart3}
-          />
-          <StatsCard
-            title="API Keys Ativas"
-            value={activeKeys.toString()}
-            change={`${keys.length} total`}
-            changeType="neutral"
-            icon={Key}
-          />
-          <StatsCard
-            title="Créditos Mensais"
-            value={subscription.monthlyCredits === -1 ? '∞' : subscription.monthlyCredits.toLocaleString()}
-            change={subscription.tier.toUpperCase()}
-            changeType={subscription.tier === 'free' ? 'neutral' : 'positive'}
-            icon={Users}
-          />
-          <StatsCard
-            title="Plano Atual"
-            value={subscription.tier === 'free' ? '$0' : subscription.tier === 'pro' ? '$29' : '$199'}
-            change={subscription.tier === 'free' ? 'Free' : 'Ativo'}
-            changeType={subscription.tier === 'free' ? 'neutral' : 'positive'}
-            icon={DollarSign}
-          />
+          <PageTransition delay={0}>
+            <StatsCard
+              title="Total de Chamadas"
+              value={totalCalls.toLocaleString()}
+              change={tierLabels[subscription.tier]}
+              changeType={subscription.tier === 'free' ? 'neutral' : 'positive'}
+              icon={BarChart3}
+            />
+          </PageTransition>
+          <PageTransition delay={50}>
+            <StatsCard
+              title="API Keys Ativas"
+              value={activeKeys.toString()}
+              change={`${keys.length} total`}
+              changeType="neutral"
+              icon={Key}
+            />
+          </PageTransition>
+          <PageTransition delay={100}>
+            <StatsCard
+              title="Créditos Mensais"
+              value={subscription.monthlyCredits === -1 ? '∞' : subscription.monthlyCredits.toLocaleString()}
+              change={subscription.tier.toUpperCase()}
+              changeType={subscription.tier === 'free' ? 'neutral' : 'positive'}
+              icon={Users}
+            />
+          </PageTransition>
+          <PageTransition delay={150}>
+            <StatsCard
+              title="Plano Atual"
+              value={subscription.tier === 'free' ? '$0' : subscription.tier === 'pro' ? '$29' : '$199'}
+              change={subscription.tier === 'free' ? 'Free' : 'Ativo'}
+              changeType={subscription.tier === 'free' ? 'neutral' : 'positive'}
+              icon={DollarSign}
+            />
+          </PageTransition>
         </div>
 
         {/* Live Metrics Panel */}
-        <div className="mb-8">
-          <LiveMetricsPanel />
-        </div>
+        <PageTransition delay={200}>
+          <div className="mb-8">
+            <LiveMetricsPanel />
+          </div>
+        </PageTransition>
 
         {/* Charts and Subscription */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
-            <RealtimeUsageChart />
+        <PageTransition delay={250}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="lg:col-span-2">
+              <RealtimeUsageChart />
+            </div>
+            <div className="space-y-6">
+              <SubscriptionCard />
+              <RateLimitingCard />
+            </div>
           </div>
-          <div className="space-y-6">
-            <SubscriptionCard />
-            <RateLimitingCard />
-          </div>
-        </div>
+        </PageTransition>
 
         {/* Latency and Endpoint Breakdown */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <LatencyGraph />
-          <EndpointBreakdown />
-        </div>
+        <PageTransition delay={300}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <LatencyGraph />
+            <EndpointBreakdown />
+          </div>
+        </PageTransition>
 
         {/* AI Insights and Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
-            <AIInsights />
+        <PageTransition delay={350}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="lg:col-span-2">
+              <AIInsights />
+            </div>
+            <RecentActivity />
           </div>
-          <RecentActivity />
-        </div>
+        </PageTransition>
 
         {/* Referral Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <ReferralCard />
-          <ReferralEvolutionChart />
-        </div>
+        <PageTransition delay={400}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <ReferralCard />
+            <ReferralEvolutionChart />
+          </div>
+        </PageTransition>
 
         {/* Leaderboard and Webhooks */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <ReferralLeaderboard />
-          <WebhooksManager />
-        </div>
+        <PageTransition delay={450}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <ReferralLeaderboard />
+            <WebhooksManager />
+          </div>
+        </PageTransition>
 
         {/* Achievements, Notifications and Export */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <AchievementsPanel />
-          <PushNotificationSettings />
-          <ExportReports />
-        </div>
+        <PageTransition delay={500}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <AchievementsPanel />
+            <PushNotificationSettings />
+            <ExportReports />
+          </div>
+        </PageTransition>
 
         {/* Realtime Metrics Dashboard */}
-        <div className="mb-8">
-          <RealtimeMetricsDashboard />
-        </div>
+        <PageTransition delay={550}>
+          <div className="mb-8">
+            <RealtimeMetricsDashboard />
+          </div>
+        </PageTransition>
 
         {/* Email Templates Manager */}
-        <div className="mb-8">
-          <EmailTemplatesManager />
-        </div>
+        <PageTransition delay={600}>
+          <div className="mb-8">
+            <EmailTemplatesManager />
+          </div>
+        </PageTransition>
 
         {/* Notification Preferences and Backups */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <NotificationPreferences />
-          <ConfigurationBackups />
-        </div>
+        <PageTransition delay={650}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <NotificationPreferences />
+            <ConfigurationBackups />
+          </div>
+        </PageTransition>
 
         {/* API Playground */}
-        <div className="mb-8">
-          <APIPlayground />
-        </div>
+        <PageTransition delay={700}>
+          <div className="mb-8">
+            <APIPlayground />
+          </div>
+        </PageTransition>
 
         {/* Billing Center */}
-        <div className="mb-8">
-          <BillingCenter />
-        </div>
+        <PageTransition delay={750}>
+          <div className="mb-8">
+            <BillingCenter />
+          </div>
+        </PageTransition>
 
         {/* Audit Logs */}
-        <div className="mb-8">
-          <AuditLogsPanel />
-        </div>
+        <PageTransition delay={800}>
+          <div className="mb-8">
+            <AuditLogsPanel />
+          </div>
+        </PageTransition>
 
         {/* Rate Limits Monitor */}
-        <div className="mb-8">
-          <RateLimitMonitor />
-        </div>
+        <PageTransition delay={850}>
+          <div className="mb-8">
+            <RateLimitMonitor />
+          </div>
+        </PageTransition>
 
         {/* API Keys Table */}
-        <APIKeysTable />
+        <PageTransition delay={900}>
+          <APIKeysTable />
+        </PageTransition>
       </main>
     </div>
     </ErrorBoundary>

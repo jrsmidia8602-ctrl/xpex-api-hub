@@ -4,6 +4,7 @@ import { ArrowLeft, Copy, Check, Play, Code, Book, Terminal, Zap, FileJson } fro
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { PageTransition } from "@/components/PageTransition";
 
 // OpenAPI 3.0 Specification
 const openApiSpec = {
@@ -224,6 +225,7 @@ const Docs = () => {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background">
       {/* Background Effects */}
       <div className="fixed inset-0 bg-grid-pattern opacity-5 pointer-events-none" />
@@ -427,6 +429,7 @@ const Docs = () => {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 };
 

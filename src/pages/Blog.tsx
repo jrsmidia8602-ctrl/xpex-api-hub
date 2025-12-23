@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import { PageTransition } from "@/components/PageTransition";
 
 const posts = [
   {
@@ -66,6 +67,7 @@ const Blog = () => {
   const regularPosts = posts.filter((p) => !p.featured);
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background">
       <Helmet>
         <title>Blog - XPEX Neural | API Insights & Updates</title>
@@ -184,6 +186,7 @@ const Blog = () => {
 
       <Footer />
     </div>
+    </PageTransition>
   );
 };
 

@@ -24,6 +24,8 @@ import { AuditLogsPanel } from "@/components/admin/AuditLogsPanel";
 import { RateLimitMonitor } from "@/components/admin/RateLimitMonitor";
 import { NotificationPreferences } from "@/components/admin/NotificationPreferences";
 import { ConfigurationBackups } from "@/components/admin/ConfigurationBackups";
+import { RealtimeMetricsDashboard } from "@/components/admin/RealtimeMetricsDashboard";
+import { EmailTemplatesManager } from "@/components/admin/EmailTemplatesManager";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { useAuth } from "@/hooks/useAuth";
@@ -173,6 +175,16 @@ const Dashboard = () => {
           <AchievementsPanel />
           <PushNotificationSettings />
           <ExportReports />
+        </div>
+
+        {/* Realtime Metrics Dashboard */}
+        <div className="mb-8">
+          <RealtimeMetricsDashboard />
+        </div>
+
+        {/* Email Templates Manager */}
+        <div className="mb-8">
+          <EmailTemplatesManager />
         </div>
 
         {/* Notification Preferences and Backups */}

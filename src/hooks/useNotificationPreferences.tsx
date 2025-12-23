@@ -1,7 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+
+const triggerAutoBackup = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    await supabase.functions.invoke('backup-configurations', {
+      body: { type: 'notification_preferences' },
+    });
+    console.log('Auto-backup triggered for notification preferences');
+  } catch (error) {
+    console.error('Error triggering auto-backup:', error);
+  }
+};
 
 export interface NotificationPreferences {
   id: string;
@@ -75,7 +89,7 @@ export const useNotificationPreferences = () => {
     }
   };
 
-  const updatePreferences = async (updates: Partial<NotificationPreferences>) => {
+  const updatePreferences = useCallback(async (updates: Partial<NotificationPreferences>) => {
     if (!user || !preferences) {
       toast.error('Você precisa estar logado');
       return false;
@@ -95,13 +109,17 @@ export const useNotificationPreferences = () => {
 
       setPreferences({ ...preferences, ...updates } as NotificationPreferences);
       toast.success('Preferências atualizadas!');
+      
+      // Trigger auto-backup after successful update
+      await triggerAutoBackup();
+      
       return true;
     } catch (error) {
       console.error('Error in updatePreferences:', error);
       toast.error('Erro ao atualizar preferências');
       return false;
     }
-  };
+  }, [user, preferences]);
 
   useEffect(() => {
     fetchPreferences();

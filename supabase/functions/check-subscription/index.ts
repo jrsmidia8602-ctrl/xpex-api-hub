@@ -23,7 +23,20 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const supabaseClient = createClient(
+  // Use anon key client for auth verification
+  const supabaseAuth = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
+
+  // Use service role key for database operations
+  const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     { auth: { persistSession: false } }
@@ -39,10 +52,15 @@ serve(async (req) => {
     if (!authHeader) throw new Error("No authorization header provided");
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
     
-    const user = userData.user;
+    // Use the auth client with the token to get user
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(token);
+    
+    if (userError) {
+      logStep("Auth error details", { error: userError.message, code: userError.status });
+      throw new Error(`Authentication error: ${userError.message}`);
+    }
+    
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
@@ -53,7 +71,7 @@ serve(async (req) => {
       logStep("No customer found");
       
       // Update profile to free tier
-      await supabaseClient
+      await supabaseAdmin
         .from('profiles')
         .update({ subscription_tier: 'free' })
         .eq('user_id', user.id);
@@ -72,7 +90,7 @@ serve(async (req) => {
     logStep("Found Stripe customer", { customerId });
 
     // Update stripe_customer_id in profile
-    await supabaseClient
+    await supabaseAdmin
       .from('profiles')
       .update({ stripe_customer_id: customerId })
       .eq('user_id', user.id);
@@ -100,7 +118,7 @@ serve(async (req) => {
       logStep("Active subscription found", { tier, subscriptionEnd });
 
       // Update profile with subscription info
-      await supabaseClient
+      await supabaseAdmin
         .from('profiles')
         .update({ subscription_tier: tier })
         .eq('user_id', user.id);

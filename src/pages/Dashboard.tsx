@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { ArrowLeft, BarChart3, Key, Users, DollarSign, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatsCard } from "@/components/admin/StatsCard";
@@ -53,6 +54,10 @@ const Dashboard = () => {
   };
 
   return (
+    <ErrorBoundary 
+      fallbackTitle="Erro no Dashboard" 
+      fallbackDescription="Ocorreu um erro ao carregar o dashboard. Por favor, recarregue a página."
+    >
     <div className="min-h-screen bg-background">
       {/* Background Effects */}
       <div className="fixed inset-0 bg-grid-pattern opacity-5 pointer-events-none" />
@@ -217,6 +222,7 @@ const Dashboard = () => {
         <APIKeysTable />
       </main>
     </div>
+    </ErrorBoundary>
   );
 };
 

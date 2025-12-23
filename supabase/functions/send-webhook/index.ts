@@ -80,6 +80,57 @@ function generateDeliveryId(): string {
   return `whd_${timestamp}${randomHex}`;
 }
 
+// Send notification when webhook fails after all retries
+async function sendWebhookFailureNotification(
+  supabaseClient: SupabaseClientType,
+  webhook: { id: string; url: string; secret: string },
+  eventType: string,
+  deliveryId: string,
+  attempts: number,
+  statusCode?: number | null,
+  errorMessage?: string
+) {
+  try {
+    // Get the webhook owner
+    const { data: webhookData } = await supabaseClient
+      .from('webhooks')
+      .select('user_id, name')
+      .eq('id', webhook.id)
+      .single();
+
+    if (!webhookData) {
+      logStep("Could not find webhook owner for notification", { webhookId: webhook.id });
+      return;
+    }
+
+    const statusInfo = statusCode ? `Status: ${statusCode}` : `Erro: ${errorMessage || 'Desconhecido'}`;
+    
+    // Create in-app notification
+    await supabaseClient
+      .from('notifications')
+      .insert({
+        user_id: webhookData.user_id,
+        title: '⚠️ Webhook Falhou',
+        message: `O webhook "${webhookData.name}" falhou após ${attempts} tentativas. Evento: ${eventType}. ${statusInfo}`,
+        type: 'webhook_failure',
+        action_url: '/dashboard',
+        read: false
+      });
+
+    logStep("Webhook failure notification sent", { 
+      userId: webhookData.user_id, 
+      webhookName: webhookData.name,
+      deliveryId,
+      attempts
+    });
+  } catch (error) {
+    logStep("Failed to send webhook failure notification", { 
+      error: error instanceof Error ? error.message : 'Unknown error',
+      webhookId: webhook.id
+    });
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClientType = any;
 
@@ -200,9 +251,12 @@ async function sendWebhookWithRetry(
       
       // Use EdgeRuntime.waitUntil for background retry
       scheduleRetry(supabaseClient, webhook, eventType, payload, deliveryId, attempt + 1, delayMs);
+    } else if (!success && attempt >= RETRY_CONFIG.maxAttempts) {
+      // All retries exhausted - send failure notification
+      await sendWebhookFailureNotification(supabaseClient, webhook, eventType, deliveryId, attempt, response.status);
     }
 
-    return { 
+    return {
       webhook_id: webhook.id, 
       delivery_id: deliveryId,
       success, 
@@ -263,6 +317,9 @@ async function sendWebhookWithRetry(
       });
       
       scheduleRetry(supabaseClient, webhook, eventType, payload, deliveryId, attempt + 1, delayMs);
+    } else if (attempt >= RETRY_CONFIG.maxAttempts) {
+      // All retries exhausted - send failure notification
+      await sendWebhookFailureNotification(supabaseClient, webhook, eventType, deliveryId, attempt, null, errorMessage);
     }
 
     return { 

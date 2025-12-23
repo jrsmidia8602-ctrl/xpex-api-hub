@@ -34,7 +34,10 @@ serve(async (req) => {
     logStep("Webhook received");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
+    
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    if (!webhookSecret) throw new Error("STRIPE_WEBHOOK_SECRET is not set");
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -44,8 +47,51 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // Get signature from headers
+    const signature = req.headers.get("stripe-signature");
+    if (!signature) {
+      logStep("ERROR: No stripe-signature header");
+      
+      // Log verification failure to audit logs
+      await supabaseAdmin.from("audit_logs").insert({
+        user_id: "00000000-0000-0000-0000-000000000000", // System user
+        action: "webhook_signature_missing",
+        resource_type: "stripe_webhook",
+        details: { error: "Missing stripe-signature header" },
+        ip_address: req.headers.get("x-forwarded-for") || "unknown",
+      });
+      
+      return new Response(
+        JSON.stringify({ error: "Missing stripe-signature header" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+
+    // Verify webhook signature
     const body = await req.text();
-    const event = JSON.parse(body);
+    let event: Stripe.Event;
+    
+    try {
+      event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
+      logStep("Signature verified successfully", { eventId: event.id, type: event.type });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      logStep("ERROR: Signature verification failed", { error: errorMessage });
+      
+      // Log verification failure to audit logs
+      await supabaseAdmin.from("audit_logs").insert({
+        user_id: "00000000-0000-0000-0000-000000000000", // System user
+        action: "webhook_signature_invalid",
+        resource_type: "stripe_webhook",
+        details: { error: errorMessage },
+        ip_address: req.headers.get("x-forwarded-for") || "unknown",
+      });
+      
+      return new Response(
+        JSON.stringify({ error: "Invalid signature" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
     
     logStep("Event type", { type: event.type });
 

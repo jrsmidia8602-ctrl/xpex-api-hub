@@ -10,14 +10,17 @@ import {
   Server,
   BarChart3,
   ShieldAlert,
+  RefreshCw,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminRole } from "@/hooks/useAdminRole";
+import { useAdminStats } from "@/hooks/useAdminStats";
 import { Navigate } from "react-router-dom";
 import { AnalyticsDashboard } from "@/components/admin/AnalyticsDashboard";
 import RealtimeEventsDashboard from "@/components/admin/RealtimeEventsDashboard";
@@ -29,30 +32,10 @@ import { ConversionExport } from "@/components/admin/ConversionExport";
 import { AdminSkeleton } from "@/components/admin/AdminSkeleton";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
-const statsData = [
-  { label: "Total Users", value: "2,847", change: "+12%", icon: Users },
-  { label: "API Calls Today", value: "156,432", change: "+8%", icon: Activity },
-  { label: "Revenue (MTD)", value: "$12,450", change: "+23%", icon: DollarSign },
-  { label: "Active API Keys", value: "1,234", change: "+5%", icon: Key },
-];
-
-const recentActivity = [
-  { user: "user@example.com", action: "Created API Key", time: "2 min ago", type: "info" },
-  { user: "dev@startup.io", action: "Upgraded to Pro", time: "15 min ago", type: "success" },
-  { user: "api@company.com", action: "Rate limit exceeded", time: "1 hour ago", type: "warning" },
-  { user: "test@demo.com", action: "New signup", time: "2 hours ago", type: "info" },
-];
-
-const systemHealth = [
-  { service: "Email Validator API", status: "operational", uptime: "99.99%" },
-  { service: "Authentication", status: "operational", uptime: "100%" },
-  { service: "Billing System", status: "operational", uptime: "99.95%" },
-  { service: "AI Insights", status: "degraded", uptime: "98.5%" },
-];
-
 const Admin = () => {
   const { user, loading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminRole();
+  const { stats, recentActivity, systemHealth, loading: statsLoading, refetch } = useAdminStats();
   const [activeTab, setActiveTab] = useState("overview");
 
   if (loading || adminLoading) {
@@ -84,6 +67,33 @@ const Admin = () => {
     );
   }
 
+  const statsData = [
+    { 
+      label: "Total Users", 
+      value: statsLoading ? "..." : stats.totalUsers.toLocaleString(), 
+      change: stats.totalUsersChange > 0 ? `+${stats.totalUsersChange}%` : `${stats.totalUsersChange}%`, 
+      icon: Users 
+    },
+    { 
+      label: "API Calls Today", 
+      value: statsLoading ? "..." : stats.apiCallsToday.toLocaleString(), 
+      change: stats.apiCallsChange > 0 ? `+${stats.apiCallsChange}%` : `${stats.apiCallsChange}%`, 
+      icon: Activity 
+    },
+    { 
+      label: "Revenue (MTD)", 
+      value: statsLoading ? "..." : `$${stats.revenueMTD.toLocaleString()}`, 
+      change: "+0%", 
+      icon: DollarSign 
+    },
+    { 
+      label: "Active API Keys", 
+      value: statsLoading ? "..." : stats.activeApiKeys.toLocaleString(), 
+      change: "+0%", 
+      icon: Key 
+    },
+  ];
+
   return (
     <ErrorBoundary
       fallbackTitle="Erro no Admin"
@@ -103,9 +113,20 @@ const Admin = () => {
             <h1 className="text-3xl font-bold">Admin Dashboard</h1>
             <p className="text-muted-foreground">Monitor and manage XPEX Neural platform</p>
           </div>
-          <Badge variant="outline" className="text-primary border-primary">
-            Admin Access
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={refetch}
+              disabled={statsLoading}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${statsLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Badge variant="outline" className="text-primary border-primary">
+              Admin Access
+            </Badge>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -116,9 +137,19 @@ const Admin = () => {
                 <div className="p-2 rounded-lg bg-primary/10">
                   <stat.icon className="w-5 h-5 text-primary" />
                 </div>
-                <span className="text-xs text-green-500 font-medium">{stat.change}</span>
+                <span className={`text-xs font-medium ${
+                  stat.change.startsWith('+') && stat.change !== '+0%' 
+                    ? 'text-green-500' 
+                    : stat.change.startsWith('-') 
+                    ? 'text-red-500' 
+                    : 'text-muted-foreground'
+                }`}>{stat.change}</span>
               </div>
-              <div className="text-2xl font-bold mb-1">{stat.value}</div>
+              {statsLoading ? (
+                <Skeleton className="h-8 w-24 mb-1" />
+              ) : (
+                <div className="text-2xl font-bold mb-1">{stat.value}</div>
+              )}
               <div className="text-sm text-muted-foreground">{stat.label}</div>
             </Card>
           ))}
@@ -142,28 +173,42 @@ const Admin = () => {
                   Recent Activity
                 </h3>
                 <div className="space-y-4">
-                  {recentActivity.map((item, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
-                      <div>
-                        <div className="text-sm font-medium">{item.action}</div>
-                        <div className="text-xs text-muted-foreground">{item.user}</div>
+                  {statsLoading ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-3 w-24" />
+                        </div>
+                        <Skeleton className="h-5 w-16" />
                       </div>
-                      <div className="text-right">
-                        <Badge
-                          variant="outline"
-                          className={
-                            item.type === "success"
-                              ? "text-green-500 border-green-500/30"
-                              : item.type === "warning"
-                              ? "text-yellow-500 border-yellow-500/30"
-                              : "text-muted-foreground"
-                          }
-                        >
-                          {item.time}
-                        </Badge>
+                    ))
+                  ) : recentActivity.length === 0 ? (
+                    <p className="text-muted-foreground text-sm py-4 text-center">No recent activity</p>
+                  ) : (
+                    recentActivity.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                        <div>
+                          <div className="text-sm font-medium">{item.action}</div>
+                          <div className="text-xs text-muted-foreground">{item.user}</div>
+                        </div>
+                        <div className="text-right">
+                          <Badge
+                            variant="outline"
+                            className={
+                              item.type === "success"
+                                ? "text-green-500 border-green-500/30"
+                                : item.type === "warning"
+                                ? "text-yellow-500 border-yellow-500/30"
+                                : "text-muted-foreground"
+                            }
+                          >
+                            {item.time}
+                          </Badge>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </Card>
 
@@ -174,19 +219,35 @@ const Admin = () => {
                   System Health
                 </h3>
                 <div className="space-y-4">
-                  {systemHealth.map((item) => (
-                    <div key={item.service} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            item.status === "operational" ? "bg-green-500" : "bg-yellow-500"
-                          }`}
-                        />
-                        <span className="text-sm">{item.service}</span>
+                  {statsLoading ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="w-2 h-2 rounded-full" />
+                          <Skeleton className="h-4 w-32" />
+                        </div>
+                        <Skeleton className="h-3 w-16" />
                       </div>
-                      <span className="text-xs text-muted-foreground">{item.uptime}</span>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    systemHealth.map((item) => (
+                      <div key={item.service} className="flex items-center justify-between py-2 border-b border-border/30 last:border-0">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-2 h-2 rounded-full ${
+                              item.status === "operational" 
+                                ? "bg-green-500" 
+                                : item.status === "degraded" 
+                                ? "bg-yellow-500" 
+                                : "bg-red-500"
+                            }`}
+                          />
+                          <span className="text-sm">{item.service}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{item.uptime}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </Card>
             </div>

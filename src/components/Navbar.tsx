@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ConnectionStatus } from "@/components/ConnectionStatus";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -96,6 +97,7 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-4">
+            <ConnectionStatus />
             <ThemeToggle />
             {user ? (
               <Link to="/dashboard">

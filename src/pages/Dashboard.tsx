@@ -21,6 +21,7 @@ import { ExportReports } from "@/components/admin/ExportReports";
 import { APIPlayground } from "@/components/admin/APIPlayground";
 import { BillingCenter } from "@/components/admin/BillingCenter";
 import { AuditLogsPanel } from "@/components/admin/AuditLogsPanel";
+import { RateLimitMonitor } from "@/components/admin/RateLimitMonitor";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { useAuth } from "@/hooks/useAuth";
@@ -185,6 +186,11 @@ const Dashboard = () => {
         {/* Audit Logs */}
         <div className="mb-8">
           <AuditLogsPanel />
+        </div>
+
+        {/* Rate Limits Monitor */}
+        <div className="mb-8">
+          <RateLimitMonitor />
         </div>
 
         {/* API Keys Table */}

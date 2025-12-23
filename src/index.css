@@ -181,6 +181,62 @@
   .animate-scan {
     animation: scan 3s linear infinite;
   }
+
+  /* Micro-interactions */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out;
+  }
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px -8px hsl(var(--primary) / 0.15);
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300;
+  }
+  .hover-glow:hover {
+    box-shadow: 0 0 24px hsl(var(--primary) / 0.3);
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200 ease-out;
+  }
+  .hover-scale:hover {
+    transform: scale(1.03);
+  }
+
+  .press-effect {
+    @apply transition-transform duration-100 ease-out;
+  }
+  .press-effect:active {
+    transform: scale(0.97);
+  }
+
+  .card-interactive {
+    @apply transition-all duration-300 ease-out cursor-pointer;
+  }
+  .card-interactive:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 32px -8px hsl(var(--primary) / 0.1);
+    border-color: hsl(var(--primary) / 0.3);
+  }
+
+  .icon-bounce:hover svg {
+    animation: bounce-icon 0.4s ease-out;
+  }
+
+  .link-underline {
+    @apply relative;
+  }
+  .link-underline::after {
+    content: '';
+    @apply absolute bottom-0 left-0 w-full h-0.5 bg-primary origin-left;
+    transform: scaleX(0);
+    transition: transform 0.3s ease-out;
+  }
+  .link-underline:hover::after {
+    transform: scaleX(1);
+  }
 }
 
 @keyframes pulse-glow {
@@ -216,5 +272,28 @@
   }
   50% {
     background-position: 100% 50%;
+  }
+}
+
+@keyframes bounce-icon {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-6px);
+  }
+  60% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
   }
 }

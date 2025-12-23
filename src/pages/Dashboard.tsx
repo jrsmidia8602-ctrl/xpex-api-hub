@@ -23,6 +23,7 @@ import { BillingCenter } from "@/components/admin/BillingCenter";
 import { AuditLogsPanel } from "@/components/admin/AuditLogsPanel";
 import { RateLimitMonitor } from "@/components/admin/RateLimitMonitor";
 import { NotificationPreferences } from "@/components/admin/NotificationPreferences";
+import { ConfigurationBackups } from "@/components/admin/ConfigurationBackups";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { useAuth } from "@/hooks/useAuth";
@@ -174,9 +175,10 @@ const Dashboard = () => {
           <ExportReports />
         </div>
 
-        {/* Notification Preferences */}
-        <div className="mb-8">
+        {/* Notification Preferences and Backups */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <NotificationPreferences />
+          <ConfigurationBackups />
         </div>
 
         {/* API Playground */}

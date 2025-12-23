@@ -116,6 +116,33 @@ export type Database = {
         }
         Relationships: []
       }
+      configuration_backups: {
+        Row: {
+          backup_type: string
+          created_at: string
+          data: Json
+          expires_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          backup_type: string
+          created_at?: string
+          data: Json
+          expires_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          backup_type?: string
+          created_at?: string
+          data?: Json
+          expires_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       newsletter_subscribers: {
         Row: {
           confirmed: boolean

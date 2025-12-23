@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.verify-webhook]
 verify_jwt = false
+
+[functions.weekly-webhook-report]
+verify_jwt = false

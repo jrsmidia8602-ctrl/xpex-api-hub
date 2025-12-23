@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { withRetry } from "@/lib/retry";
 
 export interface Notification {
   id: string;
@@ -18,6 +19,7 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) {
@@ -28,17 +30,20 @@ export const useNotifications = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (error) {
-        console.error("Error fetching notifications:", error);
-        return;
-      }
+      setIsRetrying(true);
+      const { data, error } = await withRetry(
+        async () => {
+          const result = await supabase
+            .from("notifications")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(50);
+          if (result.error) throw result.error;
+          return result;
+        },
+        { maxRetries: 3, initialDelay: 1000 }
+      );
 
       const typedData = (data || []) as Notification[];
       setNotifications(typedData);
@@ -47,17 +52,19 @@ export const useNotifications = () => {
       console.error("Error fetching notifications:", err);
     } finally {
       setLoading(false);
+      setIsRetrying(false);
     }
   }, [user]);
 
   const markAsRead = async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("id", notificationId);
-
-      if (error) throw error;
+      await withRetry(async () => {
+        const { error } = await supabase
+          .from("notifications")
+          .update({ read: true })
+          .eq("id", notificationId);
+        if (error) throw error;
+      });
 
       setNotifications((prev) =>
         prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
@@ -72,13 +79,14 @@ export const useNotifications = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ read: true })
-        .eq("user_id", user.id)
-        .eq("read", false);
-
-      if (error) throw error;
+      await withRetry(async () => {
+        const { error } = await supabase
+          .from("notifications")
+          .update({ read: true })
+          .eq("user_id", user.id)
+          .eq("read", false);
+        if (error) throw error;
+      });
 
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
@@ -89,12 +97,13 @@ export const useNotifications = () => {
 
   const deleteNotification = async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .delete()
-        .eq("id", notificationId);
-
-      if (error) throw error;
+      await withRetry(async () => {
+        const { error } = await supabase
+          .from("notifications")
+          .delete()
+          .eq("id", notificationId);
+        if (error) throw error;
+      });
 
       const notification = notifications.find((n) => n.id === notificationId);
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
@@ -110,12 +119,13 @@ export const useNotifications = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .delete()
-        .eq("user_id", user.id);
-
-      if (error) throw error;
+      await withRetry(async () => {
+        const { error } = await supabase
+          .from("notifications")
+          .delete()
+          .eq("user_id", user.id);
+        if (error) throw error;
+      });
 
       setNotifications([]);
       setUnreadCount(0);
@@ -158,6 +168,7 @@ export const useNotifications = () => {
     notifications,
     unreadCount,
     loading,
+    isRetrying,
     markAsRead,
     markAllAsRead,
     deleteNotification,

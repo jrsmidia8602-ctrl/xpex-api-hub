@@ -31,6 +31,9 @@ import { ExecutiveSummary } from "@/components/admin/ExecutiveSummary";
 import { ConversionExport } from "@/components/admin/ConversionExport";
 import { AdminSkeleton } from "@/components/admin/AdminSkeleton";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { UsersManagement } from "@/components/admin/UsersManagement";
+import { SystemConfiguration } from "@/components/admin/SystemConfiguration";
+import { AuditLogsPanel } from "@/components/admin/AuditLogsPanel";
 
 const Admin = () => {
   const { user, loading } = useAuth();
@@ -277,9 +280,7 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="users">
-            <Card className="p-6 bg-card/50 backdrop-blur border-border/50">
-              <p className="text-muted-foreground">User management interface coming soon...</p>
-            </Card>
+            <UsersManagement />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
@@ -291,9 +292,7 @@ const Admin = () => {
           </TabsContent>
 
           <TabsContent value="system">
-            <Card className="p-6 bg-card/50 backdrop-blur border-border/50">
-              <p className="text-muted-foreground">System configuration coming soon...</p>
-            </Card>
+            <SystemConfiguration />
           </TabsContent>
         </Tabs>
       </main>

@@ -27,6 +27,7 @@ import { NotificationPreferences } from "@/components/admin/NotificationPreferen
 import { ConfigurationBackups } from "@/components/admin/ConfigurationBackups";
 import { RealtimeMetricsDashboard } from "@/components/admin/RealtimeMetricsDashboard";
 import { EmailTemplatesManager } from "@/components/admin/EmailTemplatesManager";
+import { DashboardSkeleton } from "@/components/admin/DashboardSkeleton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { useAuth } from "@/hooks/useAuth";
@@ -35,10 +36,12 @@ import { useUsageLogs } from "@/hooks/useUsageLogs";
 import { useSubscription } from "@/hooks/useSubscription";
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth();
-  const { keys } = useAPIKeys();
-  const { stats } = useUsageLogs();
-  const { subscription } = useSubscription();
+  const { user, signOut, loading: authLoading } = useAuth();
+  const { keys, loading: keysLoading } = useAPIKeys();
+  const { stats, loading: statsLoading } = useUsageLogs();
+  const { subscription, loading: subscriptionLoading } = useSubscription();
+
+  const isLoading = authLoading || keysLoading || statsLoading || subscriptionLoading;
 
   const activeKeys = keys.filter(k => k.status === 'active').length;
   const totalCalls = stats?.totalCalls || keys.reduce((acc, k) => acc + k.calls_count, 0);
@@ -52,6 +55,10 @@ const Dashboard = () => {
     pro: '+12.5% este mês',
     enterprise: '+45.2% este mês'
   };
+
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <ErrorBoundary 

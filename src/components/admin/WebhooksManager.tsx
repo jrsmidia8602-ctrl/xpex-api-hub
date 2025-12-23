@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,11 +25,25 @@ import {
   Clock,
   BookOpen,
   Copy,
-  Check
+  Check,
+  TrendingDown,
+  BarChart3
 } from 'lucide-react';
 import { useWebhooks, WEBHOOK_EVENTS } from '@/hooks/useWebhooks';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Cell
+} from 'recharts';
 
 const CODE_EXAMPLES = {
   node: `const crypto = require('crypto');
@@ -176,6 +190,226 @@ try {
 }`
 };
 
+// Webhook Failures Chart Component
+const WebhookFailuresChart = ({ logs }: { logs: Array<{ id: string; success: boolean; created_at: string; event_type: string; status_code: number | null }> }) => {
+  const failureData = useMemo(() => {
+    // Group failures by day (last 7 days)
+    const now = new Date();
+    const days: Record<string, { date: string; failures: number; successes: number; total: number }> = {};
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const key = date.toISOString().split('T')[0];
+      days[key] = { 
+        date: date.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' }), 
+        failures: 0, 
+        successes: 0,
+        total: 0
+      };
+    }
+    
+    logs.forEach(log => {
+      const logDate = new Date(log.created_at).toISOString().split('T')[0];
+      if (days[logDate]) {
+        days[logDate].total++;
+        if (log.success) {
+          days[logDate].successes++;
+        } else {
+          days[logDate].failures++;
+        }
+      }
+    });
+    
+    return Object.values(days);
+  }, [logs]);
+
+  const failuresByType = useMemo(() => {
+    const types: Record<string, { type: string; failures: number; successes: number }> = {};
+    
+    logs.forEach(log => {
+      if (!types[log.event_type]) {
+        types[log.event_type] = { type: log.event_type, failures: 0, successes: 0 };
+      }
+      if (log.success) {
+        types[log.event_type].successes++;
+      } else {
+        types[log.event_type].failures++;
+      }
+    });
+    
+    return Object.values(types).sort((a, b) => b.failures - a.failures);
+  }, [logs]);
+
+  const stats = useMemo(() => {
+    const total = logs.length;
+    const failures = logs.filter(l => !l.success).length;
+    const successRate = total > 0 ? Math.round(((total - failures) / total) * 100) : 100;
+    
+    // Most common error codes
+    const errorCodes: Record<number, number> = {};
+    logs.filter(l => !l.success && l.status_code).forEach(l => {
+      errorCodes[l.status_code!] = (errorCodes[l.status_code!] || 0) + 1;
+    });
+    
+    const topErrorCodes = Object.entries(errorCodes)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([code, count]) => ({ code: parseInt(code), count }));
+    
+    return { total, failures, successRate, topErrorCodes };
+  }, [logs]);
+
+  const COLORS = ['hsl(var(--destructive))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))'];
+
+  if (logs.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-20" />
+        <p>Nenhum log de webhook disponível</p>
+        <p className="text-sm">Os dados aparecerão aqui após os primeiros envios</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Summary */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="bg-muted/30 rounded-lg p-4 text-center">
+          <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+          <p className="text-xs text-muted-foreground">Total de Envios</p>
+        </div>
+        <div className="bg-muted/30 rounded-lg p-4 text-center">
+          <p className="text-2xl font-bold text-destructive">{stats.failures}</p>
+          <p className="text-xs text-muted-foreground">Falhas</p>
+        </div>
+        <div className="bg-muted/30 rounded-lg p-4 text-center">
+          <p className={`text-2xl font-bold ${stats.successRate >= 90 ? 'text-green-500' : stats.successRate >= 70 ? 'text-yellow-500' : 'text-destructive'}`}>
+            {stats.successRate}%
+          </p>
+          <p className="text-xs text-muted-foreground">Taxa de Sucesso</p>
+        </div>
+      </div>
+
+      {/* Failures Over Time Chart */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-medium flex items-center gap-2">
+          <TrendingDown className="h-4 w-4 text-destructive" />
+          Falhas nos Últimos 7 Dias
+        </h4>
+        <div className="h-48 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={failureData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis 
+                dataKey="date" 
+                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                axisLine={{ stroke: 'hsl(var(--border))' }}
+              />
+              <YAxis 
+                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                axisLine={{ stroke: 'hsl(var(--border))' }}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'hsl(var(--card))', 
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: '8px',
+                  fontSize: '12px'
+                }}
+                labelStyle={{ color: 'hsl(var(--foreground))' }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="successes" 
+                stackId="1"
+                stroke="hsl(var(--primary))" 
+                fill="hsl(var(--primary)/0.3)" 
+                name="Sucesso"
+              />
+              <Area 
+                type="monotone" 
+                dataKey="failures" 
+                stackId="1"
+                stroke="hsl(var(--destructive))" 
+                fill="hsl(var(--destructive)/0.5)" 
+                name="Falhas"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Failures by Event Type */}
+      {failuresByType.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Falhas por Tipo de Evento
+          </h4>
+          <div className="h-32 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={failuresByType} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis 
+                  type="number" 
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                />
+                <YAxis 
+                  type="category" 
+                  dataKey="type" 
+                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                  axisLine={{ stroke: 'hsl(var(--border))' }}
+                  width={100}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px',
+                    fontSize: '12px'
+                  }}
+                />
+                <Bar dataKey="failures" name="Falhas" fill="hsl(var(--destructive))" radius={4} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Top Error Codes */}
+      {stats.topErrorCodes.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium">Códigos de Erro Frequentes</h4>
+          <div className="flex flex-wrap gap-2">
+            {stats.topErrorCodes.map(({ code, count }, index) => (
+              <Badge 
+                key={code} 
+                variant="outline" 
+                className="flex items-center gap-2"
+                style={{ borderColor: COLORS[index] }}
+              >
+                <span className="font-mono">{code}</span>
+                <span className="text-muted-foreground">({count}x)</span>
+              </Badge>
+            ))}
+          </div>
+          <div className="text-xs text-muted-foreground space-y-1">
+            {stats.topErrorCodes.some(e => e.code === 500) && <p>• 500: Erro interno do servidor de destino</p>}
+            {stats.topErrorCodes.some(e => e.code === 502) && <p>• 502: Gateway inválido</p>}
+            {stats.topErrorCodes.some(e => e.code === 503) && <p>• 503: Serviço indisponível</p>}
+            {stats.topErrorCodes.some(e => e.code === 504) && <p>• 504: Timeout do gateway</p>}
+            {stats.topErrorCodes.some(e => e.code === 408) && <p>• 408: Timeout da requisição</p>}
+            {stats.topErrorCodes.some(e => e.code === 429) && <p>• 429: Muitas requisições (rate limit)</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const WebhooksManager = () => {
   const { webhooks, logs, loading, createWebhook, updateWebhook, deleteWebhook, testWebhook } = useWebhooks();
   const [showSecret, setShowSecret] = useState<Record<string, boolean>>({});
@@ -294,11 +528,15 @@ export const WebhooksManager = () => {
       
       <CardContent className="space-y-4">
         <Tabs defaultValue="webhooks" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+            <TabsTrigger value="failures" className="gap-2">
+              <TrendingDown className="h-4 w-4" />
+              Falhas
+            </TabsTrigger>
             <TabsTrigger value="docs" className="gap-2">
               <BookOpen className="h-4 w-4" />
-              Documentação
+              Docs
             </TabsTrigger>
           </TabsList>
 
@@ -406,6 +644,10 @@ export const WebhooksManager = () => {
                 </div>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="failures" className="space-y-6 mt-4">
+            <WebhookFailuresChart logs={logs} />
           </TabsContent>
 
           <TabsContent value="docs" className="space-y-6 mt-4">

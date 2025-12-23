@@ -53,3 +53,9 @@ verify_jwt = false
 
 [functions.weekly-webhook-report]
 verify_jwt = false
+
+[functions.backup-configurations]
+verify_jwt = false
+
+[functions.restore-configurations]
+verify_jwt = false

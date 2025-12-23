@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useUsageLogs } from '@/hooks/useUsageLogs';
 import { useAlertThresholds } from '@/hooks/useAlertThresholds';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,8 +24,11 @@ export const RealtimeMetricsDashboard = () => {
   }, [logs.length]);
 
   // Check thresholds and trigger alerts
-  const checkAlerts = useCallback(() => {
-    if (!thresholds?.enabled || !stats) return;
+  useEffect(() => {
+    if (!thresholds?.enabled || !stats) {
+      setAlertTriggered(null);
+      return;
+    }
 
     const errorRate = logs.length > 0 
       ? (logs.filter(l => l.status_code >= 400).length / logs.length) * 100 
@@ -34,22 +37,24 @@ export const RealtimeMetricsDashboard = () => {
 
     // Check latency threshold
     if (avgLatency > thresholds.latency_threshold_ms) {
-      setAlertTriggered({ type: 'latency', value: avgLatency });
-      toast.warning(`Alerta: Latência média (${avgLatency.toFixed(0)}ms) acima do limite (${thresholds.latency_threshold_ms}ms)`);
+      setAlertTriggered(prev => {
+        if (prev?.type === 'latency' && prev?.value === avgLatency) return prev;
+        toast.warning(`Alerta: Latência média (${avgLatency.toFixed(0)}ms) acima do limite (${thresholds.latency_threshold_ms}ms)`);
+        return { type: 'latency', value: avgLatency };
+      });
     }
     // Check error rate threshold
     else if (errorRate > thresholds.error_rate_threshold) {
-      setAlertTriggered({ type: 'error', value: errorRate });
-      toast.warning(`Alerta: Taxa de erro (${errorRate.toFixed(1)}%) acima do limite (${thresholds.error_rate_threshold}%)`);
+      setAlertTriggered(prev => {
+        if (prev?.type === 'error' && prev?.value === errorRate) return prev;
+        toast.warning(`Alerta: Taxa de erro (${errorRate.toFixed(1)}%) acima do limite (${thresholds.error_rate_threshold}%)`);
+        return { type: 'error', value: errorRate };
+      });
     }
     else {
       setAlertTriggered(null);
     }
-  }, [thresholds, stats, logs]);
-
-  useEffect(() => {
-    checkAlerts();
-  }, [checkAlerts]);
+  }, [thresholds?.enabled, thresholds?.latency_threshold_ms, thresholds?.error_rate_threshold, stats?.avgResponseTime, logs.length]);
 
   // Calculate metrics
   const errorCount = logs.filter(l => l.status_code >= 400).length;

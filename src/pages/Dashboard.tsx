@@ -65,7 +65,7 @@ const Dashboard = () => {
       fallbackTitle="Erro no Dashboard" 
       fallbackDescription="Ocorreu um erro ao carregar o dashboard. Por favor, recarregue a página."
     >
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background animate-fade-in">
       {/* Background Effects */}
       <div className="fixed inset-0 bg-grid-pattern opacity-5 pointer-events-none" />
       <div className="fixed top-0 right-0 w-[500px] h-[500px] bg-neon-purple/10 rounded-full blur-[120px] pointer-events-none" />

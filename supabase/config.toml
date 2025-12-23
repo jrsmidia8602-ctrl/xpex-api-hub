@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.rate-limit]
 verify_jwt = false
+
+[functions.verify-webhook]
+verify_jwt = false

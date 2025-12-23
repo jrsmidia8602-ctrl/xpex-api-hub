@@ -11,11 +11,41 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
   console.log(`[SEND-WEBHOOK] ${step}${detailsStr}`);
 };
 
+// Retry configuration
+const RETRY_CONFIG = {
+  maxAttempts: 5,
+  baseDelayMs: 1000, // 1 second
+  maxDelayMs: 300000, // 5 minutes
+  backoffMultiplier: 2,
+  jitterFactor: 0.1, // 10% jitter
+};
+
 interface WebhookPayload {
   webhook_id?: string;
   user_id?: string;
   event_type: string;
   payload: Record<string, unknown>;
+}
+
+interface RetryableWebhook {
+  webhook_id: string;
+  url: string;
+  secret: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  attempt: number;
+  delivery_id: string;
+  next_retry_at?: string;
+}
+
+// Calculate delay with exponential backoff and jitter
+function calculateBackoffDelay(attempt: number): number {
+  const baseDelay = RETRY_CONFIG.baseDelayMs * Math.pow(RETRY_CONFIG.backoffMultiplier, attempt - 1);
+  const cappedDelay = Math.min(baseDelay, RETRY_CONFIG.maxDelayMs);
+  
+  // Add jitter to prevent thundering herd
+  const jitter = cappedDelay * RETRY_CONFIG.jitterFactor * (Math.random() * 2 - 1);
+  return Math.floor(cappedDelay + jitter);
 }
 
 // Generate HMAC-SHA256 signature
@@ -25,7 +55,6 @@ async function generateSignature(
   body: string
 ): Promise<string> {
   const encoder = new TextEncoder();
-  // Sign: timestamp.body (prevents replay attacks)
   const signedPayload = `${timestamp}.${body}`;
   const keyData = encoder.encode(secret);
   const message = encoder.encode(signedPayload);
@@ -43,52 +72,252 @@ async function generateSignature(
   return signatureArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Verify HMAC-SHA256 signature (for incoming webhooks)
-async function verifySignature(
-  secret: string,
-  signature: string,
-  timestamp: string,
-  body: string,
-  toleranceSeconds: number = 300 // 5 minutes
-): Promise<{ valid: boolean; reason?: string }> {
-  // Check timestamp to prevent replay attacks
-  const webhookTimestamp = parseInt(timestamp, 10);
-  const now = Math.floor(Date.now() / 1000);
-  
-  if (isNaN(webhookTimestamp)) {
-    return { valid: false, reason: 'Invalid timestamp format' };
-  }
-  
-  if (Math.abs(now - webhookTimestamp) > toleranceSeconds) {
-    return { valid: false, reason: 'Timestamp outside tolerance window (possible replay attack)' };
-  }
-  
-  // Generate expected signature
-  const expectedSignature = await generateSignature(secret, timestamp, body);
-  
-  // Constant-time comparison to prevent timing attacks
-  if (signature.length !== expectedSignature.length) {
-    return { valid: false, reason: 'Signature length mismatch' };
-  }
-  
-  let result = 0;
-  for (let i = 0; i < signature.length; i++) {
-    result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
-  }
-  
-  if (result !== 0) {
-    return { valid: false, reason: 'Signature mismatch' };
-  }
-  
-  return { valid: true };
-}
-
 // Generate webhook delivery ID for idempotency
 function generateDeliveryId(): string {
   const timestamp = Date.now().toString(36);
   const randomPart = crypto.getRandomValues(new Uint8Array(8));
   const randomHex = Array.from(randomPart).map(b => b.toString(16).padStart(2, '0')).join('');
   return `whd_${timestamp}${randomHex}`;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseClientType = any;
+
+// Send webhook with retry logic
+async function sendWebhookWithRetry(
+  supabaseClient: SupabaseClientType,
+  webhook: { id: string; url: string; secret: string },
+  eventType: string,
+  payload: Record<string, unknown>,
+  deliveryId: string,
+  attempt: number = 1
+): Promise<{
+  webhook_id: string;
+  delivery_id: string;
+  success: boolean;
+  status?: number;
+  error?: string;
+  attempts: number;
+  will_retry: boolean;
+  next_retry_at?: string;
+}> {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  
+  const webhookPayload = {
+    id: deliveryId,
+    event: eventType,
+    timestamp: new Date().toISOString(),
+    api_version: '2024-01-01',
+    attempt,
+    max_attempts: RETRY_CONFIG.maxAttempts,
+    data: payload
+  };
+
+  const bodyString = JSON.stringify(webhookPayload);
+  const signature = await generateSignature(webhook.secret, timestamp, bodyString);
+  const signatureHeader = `t=${timestamp},v1=${signature}`;
+
+  try {
+    logStep("Sending webhook", { 
+      url: webhook.url, 
+      event: eventType,
+      deliveryId,
+      attempt,
+      maxAttempts: RETRY_CONFIG.maxAttempts
+    });
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+    
+    const response = await fetch(webhook.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'XPEX-Webhook/1.0',
+        'X-Webhook-Id': deliveryId,
+        'X-Webhook-Signature': signatureHeader,
+        'X-Webhook-Timestamp': timestamp,
+        'X-Webhook-Event': eventType,
+        'X-Webhook-Attempt': attempt.toString(),
+        'X-Webhook-Max-Attempts': RETRY_CONFIG.maxAttempts.toString(),
+      },
+      body: bodyString,
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+
+    const responseText = await response.text().catch(() => '');
+    const success = response.ok;
+
+    // Determine if we should retry
+    const shouldRetry = !success && attempt < RETRY_CONFIG.maxAttempts && isRetryableStatus(response.status);
+    const nextRetryAt = shouldRetry 
+      ? new Date(Date.now() + calculateBackoffDelay(attempt)).toISOString() 
+      : undefined;
+
+    // Log the delivery
+    await supabaseClient
+      .from('webhook_logs')
+      .insert({
+        webhook_id: webhook.id,
+        event_type: eventType,
+        payload: {
+          ...webhookPayload,
+          _delivery: {
+            id: deliveryId,
+            signature_header: signatureHeader,
+            timestamp,
+            attempt,
+            will_retry: shouldRetry,
+            next_retry_at: nextRetryAt
+          }
+        },
+        status_code: response.status,
+        response: responseText.substring(0, 1000),
+        success,
+        attempts: attempt
+      });
+
+    logStep("Webhook response", { 
+      url: webhook.url, 
+      status: response.status, 
+      success,
+      deliveryId,
+      attempt,
+      willRetry: shouldRetry
+    });
+
+    // Schedule retry if needed
+    if (shouldRetry) {
+      const delayMs = calculateBackoffDelay(attempt);
+      logStep("Scheduling retry", { 
+        deliveryId, 
+        attempt: attempt + 1, 
+        delayMs,
+        nextRetryAt
+      });
+      
+      // Use EdgeRuntime.waitUntil for background retry
+      scheduleRetry(supabaseClient, webhook, eventType, payload, deliveryId, attempt + 1, delayMs);
+    }
+
+    return { 
+      webhook_id: webhook.id, 
+      delivery_id: deliveryId,
+      success, 
+      status: response.status,
+      attempts: attempt,
+      will_retry: shouldRetry,
+      next_retry_at: nextRetryAt
+    };
+  } catch (fetchError) {
+    const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
+    const isTimeout = errorMessage.includes('aborted');
+    
+    // Determine if we should retry
+    const shouldRetry = attempt < RETRY_CONFIG.maxAttempts;
+    const nextRetryAt = shouldRetry 
+      ? new Date(Date.now() + calculateBackoffDelay(attempt)).toISOString() 
+      : undefined;
+
+    // Log failed delivery
+    await supabaseClient
+      .from('webhook_logs')
+      .insert({
+        webhook_id: webhook.id,
+        event_type: eventType,
+        payload: {
+          ...webhookPayload,
+          _delivery: {
+            id: deliveryId,
+            error: errorMessage,
+            is_timeout: isTimeout,
+            attempt,
+            will_retry: shouldRetry,
+            next_retry_at: nextRetryAt
+          }
+        },
+        status_code: null,
+        response: errorMessage,
+        success: false,
+        attempts: attempt
+      });
+
+    logStep("Webhook failed", { 
+      url: webhook.url, 
+      error: errorMessage,
+      deliveryId,
+      attempt,
+      isTimeout,
+      willRetry: shouldRetry
+    });
+
+    // Schedule retry if needed
+    if (shouldRetry) {
+      const delayMs = calculateBackoffDelay(attempt);
+      logStep("Scheduling retry after failure", { 
+        deliveryId, 
+        attempt: attempt + 1, 
+        delayMs
+      });
+      
+      scheduleRetry(supabaseClient, webhook, eventType, payload, deliveryId, attempt + 1, delayMs);
+    }
+
+    return { 
+      webhook_id: webhook.id, 
+      delivery_id: deliveryId,
+      success: false, 
+      error: errorMessage,
+      attempts: attempt,
+      will_retry: shouldRetry,
+      next_retry_at: nextRetryAt
+    };
+  }
+}
+
+// Check if HTTP status code is retryable
+function isRetryableStatus(status: number): boolean {
+  // Retry on 5xx server errors and specific client errors
+  const retryableStatuses = [
+    408, // Request Timeout
+    429, // Too Many Requests
+    500, // Internal Server Error
+    502, // Bad Gateway
+    503, // Service Unavailable
+    504, // Gateway Timeout
+  ];
+  return retryableStatuses.includes(status);
+}
+
+// Schedule a retry using background task
+function scheduleRetry(
+  supabaseClient: SupabaseClientType,
+  webhook: { id: string; url: string; secret: string },
+  eventType: string,
+  payload: Record<string, unknown>,
+  deliveryId: string,
+  nextAttempt: number,
+  delayMs: number
+) {
+  // Use EdgeRuntime.waitUntil to run retry in background
+  const retryTask = async () => {
+    await new Promise(resolve => setTimeout(resolve, delayMs));
+    logStep("Executing scheduled retry", { deliveryId, attempt: nextAttempt });
+    await sendWebhookWithRetry(supabaseClient, webhook, eventType, payload, deliveryId, nextAttempt);
+  };
+
+  // @ts-ignore - EdgeRuntime is available in Deno Deploy
+  if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+    // @ts-ignore
+    EdgeRuntime.waitUntil(retryTask());
+  } else {
+    // Fallback for local development - just run async
+    retryTask().catch(err => {
+      logStep("Retry task failed", { deliveryId, error: err.message });
+    });
+  }
 }
 
 serve(async (req) => {
@@ -148,113 +377,7 @@ serve(async (req) => {
     const results = await Promise.all(
       webhooksToSend.map(async (webhook) => {
         const deliveryId = generateDeliveryId();
-        const timestamp = Math.floor(Date.now() / 1000).toString();
-        
-        const webhookPayload = {
-          id: deliveryId,
-          event: event_type,
-          timestamp: new Date().toISOString(),
-          api_version: '2024-01-01',
-          data: payload
-        };
-
-        const bodyString = JSON.stringify(webhookPayload);
-        
-        // Generate HMAC-SHA256 signature
-        const signature = await generateSignature(webhook.secret, timestamp, bodyString);
-        
-        // Format: t=timestamp,v1=signature (similar to Stripe format)
-        const signatureHeader = `t=${timestamp},v1=${signature}`;
-
-        try {
-          logStep("Sending webhook", { 
-            url: webhook.url, 
-            event: event_type,
-            deliveryId 
-          });
-          
-          const response = await fetch(webhook.url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': 'XPEX-Webhook/1.0',
-              'X-Webhook-Id': deliveryId,
-              'X-Webhook-Signature': signatureHeader,
-              'X-Webhook-Timestamp': timestamp,
-              'X-Webhook-Event': event_type,
-            },
-            body: bodyString
-          });
-
-          const responseText = await response.text().catch(() => '');
-          const success = response.ok;
-
-          // Log the delivery with signature info
-          await supabaseClient
-            .from('webhook_logs')
-            .insert({
-              webhook_id: webhook.id,
-              event_type,
-              payload: {
-                ...webhookPayload,
-                _delivery: {
-                  id: deliveryId,
-                  signature_header: signatureHeader,
-                  timestamp
-                }
-              },
-              status_code: response.status,
-              response: responseText.substring(0, 1000),
-              success
-            });
-
-          logStep("Webhook sent", { 
-            url: webhook.url, 
-            status: response.status, 
-            success,
-            deliveryId
-          });
-
-          return { 
-            webhook_id: webhook.id, 
-            delivery_id: deliveryId,
-            success, 
-            status: response.status 
-          };
-        } catch (fetchError) {
-          const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
-          
-          // Log failed delivery
-          await supabaseClient
-            .from('webhook_logs')
-            .insert({
-              webhook_id: webhook.id,
-              event_type,
-              payload: {
-                ...webhookPayload,
-                _delivery: {
-                  id: deliveryId,
-                  error: errorMessage
-                }
-              },
-              status_code: null,
-              response: errorMessage,
-              success: false
-            });
-
-          logStep("Webhook failed", { 
-            url: webhook.url, 
-            error: errorMessage,
-            deliveryId 
-          });
-
-          return { 
-            webhook_id: webhook.id, 
-            delivery_id: deliveryId,
-            success: false, 
-            error: errorMessage 
-          };
-        }
+        return sendWebhookWithRetry(supabaseClient, webhook, event_type, payload, deliveryId);
       })
     );
 
@@ -262,6 +385,14 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         results,
+        retry_info: {
+          max_attempts: RETRY_CONFIG.maxAttempts,
+          backoff_strategy: 'exponential',
+          base_delay_ms: RETRY_CONFIG.baseDelayMs,
+          max_delay_ms: RETRY_CONFIG.maxDelayMs,
+          jitter: true,
+          retryable_status_codes: [408, 429, 500, 502, 503, 504]
+        },
         signature_info: {
           algorithm: 'HMAC-SHA256',
           header_format: 't={timestamp},v1={signature}',

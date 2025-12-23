@@ -47,6 +47,39 @@ export type Database = {
         }
         Relationships: []
       }
+      alert_thresholds: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          error_rate_threshold: number
+          id: string
+          last_alert_at: string | null
+          latency_threshold_ms: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          error_rate_threshold?: number
+          id?: string
+          last_alert_at?: string | null
+          latency_threshold_ms?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          error_rate_threshold?: number
+          id?: string
+          last_alert_at?: string | null
+          latency_threshold_ms?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       api_keys: {
         Row: {
           calls_count: number
@@ -140,6 +173,45 @@ export type Database = {
           expires_at?: string
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          created_at: string
+          html_content: string
+          id: string
+          is_default: boolean
+          name: string
+          subject: string
+          template_type: string
+          updated_at: string
+          user_id: string
+          variables: Json | null
+        }
+        Insert: {
+          created_at?: string
+          html_content: string
+          id?: string
+          is_default?: boolean
+          name: string
+          subject: string
+          template_type?: string
+          updated_at?: string
+          user_id: string
+          variables?: Json | null
+        }
+        Update: {
+          created_at?: string
+          html_content?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          subject?: string
+          template_type?: string
+          updated_at?: string
+          user_id?: string
+          variables?: Json | null
         }
         Relationships: []
       }

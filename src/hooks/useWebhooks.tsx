@@ -1,7 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+
+// Auto-backup helper
+const triggerAutoBackup = async (userId: string) => {
+  try {
+    await supabase.functions.invoke('backup-configurations', {
+      body: { backup_type: 'webhooks' }
+    });
+    console.log('Auto-backup triggered for webhooks');
+  } catch (error) {
+    console.error('Auto-backup failed:', error);
+  }
+};
 
 export interface Webhook {
   id: string;
@@ -109,6 +121,7 @@ export const useWebhooks = () => {
 
       toast.success('Webhook criado com sucesso!');
       await fetchWebhooks();
+      triggerAutoBackup(user.id);
       return data as Webhook;
     } catch (error) {
       console.error('Error in createWebhook:', error);
@@ -132,6 +145,7 @@ export const useWebhooks = () => {
 
       toast.success('Webhook atualizado!');
       await fetchWebhooks();
+      if (user) triggerAutoBackup(user.id);
       return true;
     } catch (error) {
       console.error('Error in updateWebhook:', error);
@@ -155,6 +169,7 @@ export const useWebhooks = () => {
 
       toast.success('Webhook deletado!');
       await fetchWebhooks();
+      if (user) triggerAutoBackup(user.id);
       return true;
     } catch (error) {
       console.error('Error in deleteWebhook:', error);

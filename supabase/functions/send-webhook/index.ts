@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,7 +92,7 @@ async function sendWebhookFailureNotification(
   errorMessage?: string
 ) {
   try {
-    // Get the webhook owner
+    // Get the webhook owner and their email
     const { data: webhookData } = await supabaseClient
       .from('webhooks')
       .select('user_id, name')
@@ -102,6 +103,13 @@ async function sendWebhookFailureNotification(
       logStep("Could not find webhook owner for notification", { webhookId: webhook.id });
       return;
     }
+
+    // Get user email from profiles
+    const { data: profileData } = await supabaseClient
+      .from('profiles')
+      .select('email, full_name')
+      .eq('user_id', webhookData.user_id)
+      .single();
 
     const statusInfo = statusCode ? `Status: ${statusCode}` : `Erro: ${errorMessage || 'Desconhecido'}`;
     
@@ -123,12 +131,172 @@ async function sendWebhookFailureNotification(
       deliveryId,
       attempts
     });
+
+    // Send email notification via Resend
+    if (profileData?.email) {
+      await sendWebhookFailureEmail(
+        profileData.email,
+        profileData.full_name || 'Usuário',
+        webhookData.name,
+        webhook.url,
+        eventType,
+        deliveryId,
+        attempts,
+        statusCode,
+        errorMessage
+      );
+    }
   } catch (error) {
     logStep("Failed to send webhook failure notification", { 
       error: error instanceof Error ? error.message : 'Unknown error',
       webhookId: webhook.id
     });
   }
+}
+
+// Send email notification for webhook failure
+async function sendWebhookFailureEmail(
+  email: string,
+  userName: string,
+  webhookName: string,
+  webhookUrl: string,
+  eventType: string,
+  deliveryId: string,
+  attempts: number,
+  statusCode?: number | null,
+  errorMessage?: string
+) {
+  const resendApiKey = Deno.env.get("RESEND_API_KEY");
+  
+  if (!resendApiKey) {
+    logStep("RESEND_API_KEY not configured, skipping email notification");
+    return;
+  }
+
+  try {
+    const resend = new Resend(resendApiKey);
+    
+    const statusInfo = statusCode 
+      ? `Código HTTP: <strong>${statusCode}</strong>` 
+      : `Erro: <strong>${errorMessage || 'Desconhecido'}</strong>`;
+
+    const errorExplanation = getErrorExplanation(statusCode);
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+          <h1 style="color: #fff; margin: 0; font-size: 24px;">⚠️ Webhook Falhou</h1>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
+          <p style="margin-top: 0;">Olá <strong>${userName}</strong>,</p>
+          
+          <p>Seu webhook <strong>"${webhookName}"</strong> falhou após <strong>${attempts} tentativas</strong> de entrega.</p>
+          
+          <div style="background: #fff; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #dc3545; font-size: 16px;">Detalhes da Falha</h3>
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;">Webhook:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-weight: 500;">${webhookName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;">URL:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace; font-size: 12px; word-break: break-all;">${webhookUrl}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;">Evento:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace;">${eventType}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;">ID de Entrega:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; font-family: monospace; font-size: 11px;">${deliveryId}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee; color: #666;">Tentativas:</td>
+                <td style="padding: 8px 0; border-bottom: 1px solid #eee;">${attempts}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #666;">Status:</td>
+                <td style="padding: 8px 0; color: #dc3545;">${statusInfo}</td>
+              </tr>
+            </table>
+          </div>
+
+          ${errorExplanation ? `
+          <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 14px;"><strong>💡 Possível causa:</strong> ${errorExplanation}</p>
+          </div>
+          ` : ''}
+          
+          <div style="background: #e7f1ff; border-radius: 8px; padding: 15px; margin: 20px 0;">
+            <h4 style="margin-top: 0; color: #0066cc; font-size: 14px;">Próximos passos:</h4>
+            <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
+              <li>Verifique se a URL do webhook está correta e acessível</li>
+              <li>Confirme que seu servidor está online e respondendo</li>
+              <li>Revise os logs do webhook no painel de controle</li>
+              <li>Teste o webhook manualmente usando o botão "Testar"</li>
+            </ul>
+          </div>
+          
+          <div style="text-align: center; margin-top: 25px;">
+            <a href="https://xpex.dev/dashboard" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 500;">Ver Detalhes no Dashboard</a>
+          </div>
+          
+          <hr style="border: none; border-top: 1px solid #e9ecef; margin: 25px 0;">
+          
+          <p style="margin-bottom: 0; font-size: 12px; color: #666; text-align: center;">
+            Este é um email automático do sistema de webhooks XPEX.<br>
+            Você pode gerenciar suas notificações no <a href="https://xpex.dev/dashboard" style="color: #667eea;">painel de controle</a>.
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const { error } = await resend.emails.send({
+      from: "XPEX Webhooks <notifications@resend.dev>",
+      to: [email],
+      subject: `⚠️ Webhook "${webhookName}" falhou após ${attempts} tentativas`,
+      html: emailHtml,
+    });
+
+    if (error) {
+      logStep("Failed to send email via Resend", { error: error.message });
+    } else {
+      logStep("Webhook failure email sent successfully", { email, webhookName });
+    }
+  } catch (error) {
+    logStep("Error sending webhook failure email", { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+}
+
+// Get human-readable explanation for HTTP status codes
+function getErrorExplanation(statusCode?: number | null): string | null {
+  if (!statusCode) return null;
+  
+  const explanations: Record<number, string> = {
+    400: "O servidor retornou um erro de requisição inválida. Verifique o formato do payload.",
+    401: "Autenticação falhou. Verifique se o servidor está configurado para aceitar a assinatura do webhook.",
+    403: "Acesso negado. O servidor recusou a conexão.",
+    404: "URL não encontrada. Verifique se o endpoint do webhook está correto.",
+    408: "Timeout de requisição. O servidor demorou muito para responder.",
+    429: "Muitas requisições. O servidor está aplicando rate limiting.",
+    500: "Erro interno do servidor. Verifique os logs do seu servidor de destino.",
+    502: "Bad Gateway. Pode haver um problema com proxy ou load balancer.",
+    503: "Serviço indisponível. O servidor pode estar em manutenção ou sobrecarregado.",
+    504: "Gateway timeout. O servidor intermediário não recebeu resposta a tempo.",
+  };
+  
+  return explanations[statusCode] || null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { withRetry } from '@/lib/retry';
 
 interface AdminRoleState {
   isAdmin: boolean;
   loading: boolean;
   error: string | null;
+  isRetrying: boolean;
 }
 
 export const useAdminRole = (): AdminRoleState => {
@@ -14,36 +16,60 @@ export const useAdminRole = (): AdminRoleState => {
     isAdmin: false,
     loading: true,
     error: null,
+    isRetrying: false,
   });
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const checkAdminRole = async () => {
       if (!user) {
-        setState({ isAdmin: false, loading: false, error: null });
+        setState({ isAdmin: false, loading: false, error: null, isRetrying: false });
         return;
       }
 
       try {
-        // Use the has_role database function to check admin status server-side
-        const { data, error } = await supabase.rpc('has_role', {
-          _user_id: user.id,
-          _role: 'admin',
-        });
+        const data = await withRetry(
+          async () => {
+            const { data, error } = await supabase.rpc('has_role', {
+              _user_id: user.id,
+              _role: 'admin',
+            });
 
-        if (error) {
-          console.error('Error checking admin role:', error);
-          setState({ isAdmin: false, loading: false, error: error.message });
-          return;
+            if (error) throw error;
+            return data;
+          },
+          {
+            maxRetries: 3,
+            initialDelay: 1000,
+            onRetry: (error, attempt) => {
+              if (mountedRef.current) {
+                setState(prev => ({ ...prev, isRetrying: true }));
+                console.log(`Retry attempt ${attempt} for admin role check`);
+              }
+            },
+          }
+        );
+
+        if (mountedRef.current) {
+          setState({ isAdmin: data === true, loading: false, error: null, isRetrying: false });
         }
-
-        setState({ isAdmin: data === true, loading: false, error: null });
       } catch (err) {
         console.error('Error checking admin role:', err);
-        setState({
-          isAdmin: false,
-          loading: false,
-          error: err instanceof Error ? err.message : 'Unknown error',
-        });
+        if (mountedRef.current) {
+          setState({
+            isAdmin: false,
+            loading: false,
+            error: err instanceof Error ? err.message : 'Unknown error',
+            isRetrying: false,
+          });
+        }
       }
     };
 

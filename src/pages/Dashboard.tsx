@@ -22,6 +22,7 @@ import { APIPlayground } from "@/components/admin/APIPlayground";
 import { BillingCenter } from "@/components/admin/BillingCenter";
 import { AuditLogsPanel } from "@/components/admin/AuditLogsPanel";
 import { RateLimitMonitor } from "@/components/admin/RateLimitMonitor";
+import { NotificationPreferences } from "@/components/admin/NotificationPreferences";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { useAuth } from "@/hooks/useAuth";
@@ -171,6 +172,11 @@ const Dashboard = () => {
           <AchievementsPanel />
           <PushNotificationSettings />
           <ExportReports />
+        </div>
+
+        {/* Notification Preferences */}
+        <div className="mb-8">
+          <NotificationPreferences />
         </div>
 
         {/* API Playground */}

@@ -33,6 +33,7 @@ import LinkMagic from "./pages/products/LinkMagic";
 import BreachScan from "./pages/products/BreachScan";
 import CopyVoraz from "./pages/products/CopyVoraz";
 import ExtrairProdutos from "./pages/products/ExtrairProdutos";
+import GoldMailSaaS from "./pages/products/GoldMailSaaS";
 import Credits from "./pages/Credits";
 import NotFound from "./pages/NotFound";
 import CookieConsent from "./components/CookieConsent";
@@ -74,6 +75,7 @@ const App = () => (
                   <Route path="/products/breach-scan" element={<BreachScan />} />
                   <Route path="/products/copy-voraz" element={<CopyVoraz />} />
                   <Route path="/products/extrair-produtos" element={<ExtrairProdutos />} />
+                  <Route path="/products/goldmail-saas" element={<GoldMailSaaS />} />
                   <Route path="/credits" element={<Credits />} />
                   <Route
                     path="/dashboard" 

@@ -139,9 +139,9 @@ const GoldEmailValidator = () => {
   ];
 
   const plans = [
-    { name: "Starter", credits: "2,000", price: "$5" },
-    { name: "Growth", credits: "20,000", price: "$39" },
-    { name: "Scale", credits: "100,000", price: "$149" }
+    { name: "Starter", credits: "5,000", price: "$9", unit: "month", cta: "Get Started" },
+    { name: "Growth", credits: "25,000", price: "$49", unit: "month", highlighted: true, cta: "Get Started" },
+    { name: "Scale", credits: "150,000", price: "$199", unit: "month", cta: "Contact Sales" }
   ];
 
   const devFeatures = [
@@ -404,7 +404,7 @@ const GoldEmailValidator = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold mb-3">GoldMail Product Suite</h2>
-            <p className="text-muted-foreground">Complete email intelligence ecosystem.</p>
+            <p className="text-muted-foreground">Complete email intelligence ecosystem</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -468,26 +468,32 @@ const GoldEmailValidator = () => {
               Pay As You Go
             </Badge>
             <h2 className="text-2xl md:text-3xl font-bold mb-3">Simple, Transparent Pricing</h2>
-            <p className="text-muted-foreground">
-              Starting at <span className="text-amber-400 font-mono">$0.00149</span> per validation
-            </p>
+            <p className="text-muted-foreground">Pay only for what you use</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
-            {plans.map((plan, i) => (
+            {plans.map((plan) => (
               <Card 
                 key={plan.name} 
-                className={`p-6 text-center ${i === 1 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-card/50 border-amber-500/10'}`}
+                className={`p-6 text-center relative ${plan.highlighted ? 'bg-amber-500/10 border-amber-500/30 ring-1 ring-amber-500/30' : 'bg-card/50 border-amber-500/10'}`}
               >
+                {plan.highlighted && (
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-black text-xs">
+                    Most Popular
+                  </Badge>
+                )}
                 <h3 className="font-bold text-xl mb-2">{plan.name}</h3>
-                <div className="text-3xl font-bold text-amber-400 mb-2">{plan.price}</div>
+                <div className="flex items-baseline justify-center gap-1 mb-1">
+                  <span className="text-3xl font-bold text-amber-400">{plan.price}</span>
+                  <span className="text-muted-foreground text-sm">/{plan.unit}</span>
+                </div>
                 <div className="text-muted-foreground text-sm mb-6">{plan.credits} validations</div>
                 <Button 
-                  variant={i === 1 ? "default" : "outline"} 
-                  className={i === 1 ? "w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold" : "w-full border-amber-500/30"}
-                  onClick={() => navigate('/credits')}
+                  variant={plan.highlighted ? "default" : "outline"} 
+                  className={plan.highlighted ? "w-full bg-amber-500 hover:bg-amber-600 text-black font-semibold" : "w-full border-amber-500/30"}
+                  onClick={() => plan.cta === "Contact Sales" ? navigate('/contact') : navigate('/credits')}
                 >
-                  Get Started
+                  {plan.cta}
                 </Button>
               </Card>
             ))}
